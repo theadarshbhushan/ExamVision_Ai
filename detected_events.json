@@ -1,0 +1,56 @@
+[
+  {
+    "start_time": 0.0,
+    "end_time": 5.4,
+    "zone_id": 6,
+    "avg_motion_intensity": 0.5041
+  },
+  {
+    "start_time": 0.0,
+    "end_time": 5.4,
+    "zone_id": 7,
+    "avg_motion_intensity": 0.4946
+  },
+  {
+    "start_time": 0.0,
+    "end_time": 5.4,
+    "zone_id": 8,
+    "avg_motion_intensity": 0.4704
+  },
+  {
+    "start_time": 0.3,
+    "end_time": 5.4,
+    "zone_id": 0,
+    "avg_motion_intensity": 0.4793
+  },
+  {
+    "start_time": 0.3,
+    "end_time": 5.4,
+    "zone_id": 3,
+    "avg_motion_intensity": 0.4807
+  },
+  {
+    "start_time": 0.5,
+    "end_time": 5.4,
+    "zone_id": 4,
+    "avg_motion_intensity": 0.5463
+  },
+  {
+    "start_time": 0.7,
+    "end_time": 5.4,
+    "zone_id": 1,
+    "avg_motion_intensity": 0.5058
+  },
+  {
+    "start_time": 0.7,
+    "end_time": 5.4,
+    "zone_id": 2,
+    "avg_motion_intensity": 0.4506
+  },
+  {
+    "start_time": 1.0,
+    "end_time": 5.4,
+    "zone_id": 5,
+    "avg_motion_intensity": 0.5463
+  }
+]

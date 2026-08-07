@@ -1,0 +1,28 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python cache and temporary files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.cache/
+.pytest_cache/
+
+# Datasets (large files should be shared offline or via storage drive)
+data/
+
+# Archives
+*.zip
+*.tar
+*.gz
+
+# Secrets and environment configurations
+.env
+*.env
+
+# YOLOv8 and PyTorch model weight files
+*.pt
+*.pth
