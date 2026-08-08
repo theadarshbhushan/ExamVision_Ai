@@ -1,56 +1,158 @@
 [
   {
-    "start_time": 0.0,
-    "end_time": 5.4,
-    "zone_id": 6,
-    "avg_motion_intensity": 0.5041
-  },
-  {
-    "start_time": 0.0,
-    "end_time": 5.4,
-    "zone_id": 7,
-    "avg_motion_intensity": 0.4946
-  },
-  {
-    "start_time": 0.0,
-    "end_time": 5.4,
-    "zone_id": 8,
-    "avg_motion_intensity": 0.4704
-  },
-  {
-    "start_time": 0.3,
-    "end_time": 5.4,
-    "zone_id": 0,
-    "avg_motion_intensity": 0.4793
-  },
-  {
-    "start_time": 0.3,
-    "end_time": 5.4,
-    "zone_id": 3,
-    "avg_motion_intensity": 0.4807
-  },
-  {
-    "start_time": 0.5,
-    "end_time": 5.4,
-    "zone_id": 4,
-    "avg_motion_intensity": 0.5463
-  },
-  {
-    "start_time": 0.7,
-    "end_time": 5.4,
+    "start_time": 0.05,
+    "end_time": 4.8,
     "zone_id": 1,
-    "avg_motion_intensity": 0.5058
+    "avg_motion_intensity": 0.0714
+  },
+  {
+    "start_time": 0.25,
+    "end_time": 5.8,
+    "zone_id": 4,
+    "avg_motion_intensity": 0.2473
+  },
+  {
+    "start_time": 0.25,
+    "end_time": 5.8,
+    "zone_id": 7,
+    "avg_motion_intensity": 0.1146
   },
   {
     "start_time": 0.7,
-    "end_time": 5.4,
+    "end_time": 1.6,
     "zone_id": 2,
-    "avg_motion_intensity": 0.4506
+    "avg_motion_intensity": 0.0228
   },
   {
-    "start_time": 1.0,
-    "end_time": 5.4,
-    "zone_id": 5,
-    "avg_motion_intensity": 0.5463
+    "start_time": 1.05,
+    "end_time": 2.85,
+    "zone_id": 6,
+    "avg_motion_intensity": 0.0227
+  },
+  {
+    "start_time": 5.65,
+    "end_time": 5.8,
+    "zone_id": 1,
+    "avg_motion_intensity": 0.0417
+  },
+  {
+    "start_time": 8.6,
+    "end_time": 10.3,
+    "zone_id": 1,
+    "avg_motion_intensity": 0.0673
+  },
+  {
+    "start_time": 8.6,
+    "end_time": 13.85,
+    "zone_id": 4,
+    "avg_motion_intensity": 0.1348
+  },
+  {
+    "start_time": 8.6,
+    "end_time": 11.95,
+    "zone_id": 7,
+    "avg_motion_intensity": 0.13
+  },
+  {
+    "start_time": 8.8,
+    "end_time": 10.9,
+    "zone_id": 3,
+    "avg_motion_intensity": 0.0306
+  },
+  {
+    "start_time": 15.85,
+    "end_time": 16.9,
+    "zone_id": 7,
+    "avg_motion_intensity": 0.0243
+  },
+  {
+    "start_time": 15.95,
+    "end_time": 16.3,
+    "zone_id": 4,
+    "avg_motion_intensity": 0.0401
+  },
+  {
+    "start_time": 17.8,
+    "end_time": 19.1,
+    "zone_id": 4,
+    "avg_motion_intensity": 0.0379
+  },
+  {
+    "start_time": 25.55,
+    "end_time": 30.2,
+    "zone_id": 7,
+    "avg_motion_intensity": 0.1101
+  },
+  {
+    "start_time": 25.75,
+    "end_time": 29.8,
+    "zone_id": 4,
+    "avg_motion_intensity": 0.0829
+  },
+  {
+    "start_time": 26.15,
+    "end_time": 27.45,
+    "zone_id": 1,
+    "avg_motion_intensity": 0.0272
+  },
+  {
+    "start_time": 26.8,
+    "end_time": 27.5,
+    "zone_id": 3,
+    "avg_motion_intensity": 0.0337
+  },
+  {
+    "start_time": 48.8,
+    "end_time": 59.6,
+    "zone_id": 7,
+    "avg_motion_intensity": 0.11
+  },
+  {
+    "start_time": 48.9,
+    "end_time": 50.75,
+    "zone_id": 1,
+    "avg_motion_intensity": 0.0487
+  },
+  {
+    "start_time": 48.95,
+    "end_time": 57.7,
+    "zone_id": 4,
+    "avg_motion_intensity": 0.2548
+  },
+  {
+    "start_time": 51.5,
+    "end_time": 54.5,
+    "zone_id": 1,
+    "avg_motion_intensity": 0.0826
+  },
+  {
+    "start_time": 51.65,
+    "end_time": 57.4,
+    "zone_id": 3,
+    "avg_motion_intensity": 0.2941
+  },
+  {
+    "start_time": 51.85,
+    "end_time": 57.0,
+    "zone_id": 6,
+    "avg_motion_intensity": 0.2548
+  },
+  {
+    "start_time": 58.35,
+    "end_time": 59.8,
+    "zone_id": 4,
+    "avg_motion_intensity": 0.0496
+  },
+  {
+    "start_time": 65.25,
+    "end_time": 66.8,
+    "zone_id": 7,
+    "avg_motion_intensity": 0.05
+  },
+  {
+    "start_time": 65.35,
+    "end_time": 66.8,
+    "zone_id": 4,
+    "avg_motion_intensity": 0.1265
   }
 ]
