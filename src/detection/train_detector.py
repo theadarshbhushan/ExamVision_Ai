@@ -26,6 +26,16 @@ def main():
     batch = 16
     device = "cpu"
     
+    # Print dataset counts for verification
+    cheating_dataset_dir = os.path.dirname(dataset_yaml)
+    print("\nDataset split counts before training:")
+    for split in ["train", "valid"]:
+        img_dir = os.path.join(cheating_dataset_dir, split, "images")
+        if os.path.exists(img_dir):
+            count = len([f for f in os.listdir(img_dir) if f.lower().endswith((".jpg", ".jpeg", ".png"))])
+            print(f"  {split} set: {count} images")
+    print()
+
     print(f"Starting training on device={device} for {epochs} epochs at imgsz={imgsz}...")
     model.train(
         data=dataset_yaml,
@@ -38,10 +48,9 @@ def main():
         exist_ok=True
     )
     
-    # 5. Copy the best weights to models/phone_chit_detector.pt
-    best_weights_path = os.path.join("runs", "train_cheating", "weights", "best.pt")
-    target_weights_path = os.path.join(models_dir, "phone_chit_detector.pt")
-    
+    # 5. Copy the best weights to models/phone_chit_detector_v2.pt
+    best_weights_path = os.path.join("runs", "detect", "runs", "train_cheating", "weights", "best.pt")
+    target_weights_path = os.path.join(models_dir, "phone_chit_detector_v2.pt")
     if os.path.exists(best_weights_path):
         shutil.copy(best_weights_path, target_weights_path)
         print("\n" + "="*60)

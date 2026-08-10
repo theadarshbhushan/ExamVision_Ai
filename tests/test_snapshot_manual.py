@@ -80,7 +80,10 @@ def main():
             event=ev,
             event_id=event_id,
             motion_results=motion_results,
-            before_offset=1.0
+            before_offset=1.0,
+            grid_rows=motion_config.get('grid_rows', 3),
+            grid_cols=motion_config.get('grid_cols', 3),
+            custom_zones=motion_config.get('custom_zones', None)
         )
         snapshot_meta.append(meta)
         
@@ -90,7 +93,10 @@ def main():
         
         if b_size > 0 and a_size > 0:
             snapshots_created += 1
-            print(f"  Event #{event_id}: Zone {ev['zone_id']} | Before: {b_size/1024:.1f}KB | Peak/After: {a_size/1024:.1f}KB")
+            diff_str = ""
+            if 'pixel_diff' in meta and meta['pixel_diff'] is not None:
+                diff_str = f" | Pixel Diff: {meta['pixel_diff']:.2f}"
+            print(f"  Event #{event_id}: Zone {ev['zone_id']} | Before: {b_size/1024:.1f}KB | Peak/After: {a_size/1024:.1f}KB{diff_str}")
             
     # 5. Print Summary
     video_name = os.path.splitext(os.path.basename(video_path))[0]
