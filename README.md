@@ -1,6 +1,5 @@
 # ExamVision AI — Offline Video Segmentation & ROI Detection Using Motion Estimation
 
-Hackathon prototype built for the **Drishti AI Hackathon 2026** by **Team SoulKnight (DI2_26)**.
 
 This system analyzes recorded exam-hall CCTV footage offline. It splits the video frames into a spatial $N \times M$ grid (Region of Interest zones) to separate overlapping motion from multiple people in a crowded room, detects motion in each zone using background subtraction (OpenCV MOG2/KNN), segments continuous active motion into discrete events with start/end timestamps, and provides stubs for integrating object detection (YOLOv8) on flagged events.
 
