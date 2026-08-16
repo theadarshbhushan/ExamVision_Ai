@@ -20,21 +20,29 @@ def main():
     os.makedirs(models_dir, exist_ok=True)
     
     # 4. Fine-tune on CPU (since CUDA is not available)
-    # Using imgsz=416 for fast CPU training, and 30 epochs
-    epochs = 30
+    # Using imgsz=416 for fast CPU training, and 25 epochs
+    epochs = 25
     imgsz = 416
     batch = 16
     device = "cpu"
     
     # Print dataset counts for verification
     cheating_dataset_dir = os.path.dirname(dataset_yaml)
-    print("\nDataset split counts before training:")
-    for split in ["train", "valid"]:
+    print("\n" + "="*60)
+    print("TRAINING CONFIGURATION CONFIRMATION:")
+    print(f"  Epochs:         {epochs}")
+    print(f"  Image Size:     {imgsz}")
+    print(f"  Batch Size:     {batch}")
+    print(f"  Device:         {device}")
+    print(f"  Target Weight:  models/phone_chit_detector_v3.pt")
+    
+    print("\nDataset split counts:")
+    for split in ["train", "valid", "test"]:
         img_dir = os.path.join(cheating_dataset_dir, split, "images")
         if os.path.exists(img_dir):
             count = len([f for f in os.listdir(img_dir) if f.lower().endswith((".jpg", ".jpeg", ".png"))])
-            print(f"  {split} set: {count} images")
-    print()
+            print(f"    {split:<6} set: {count} images")
+    print("="*60 + "\n")
 
     print(f"Starting training on device={device} for {epochs} epochs at imgsz={imgsz}...")
     model.train(
@@ -44,13 +52,13 @@ def main():
         batch=batch,
         device=device,
         project="runs",
-        name="train_cheating",
-        exist_ok=True
+        name="train_cheating_v3",
+        exist_ok=False
     )
     
-    # 5. Copy the best weights to models/phone_chit_detector_v2.pt
-    best_weights_path = os.path.join("runs", "detect", "runs", "train_cheating", "weights", "best.pt")
-    target_weights_path = os.path.join(models_dir, "phone_chit_detector_v2.pt")
+    # 5. Copy the best weights to models/phone_chit_detector_v3.pt
+    best_weights_path = os.path.join(model.trainer.save_dir, "weights", "best.pt")
+    target_weights_path = os.path.join(models_dir, "phone_chit_detector_v3.pt")
     if os.path.exists(best_weights_path):
         shutil.copy(best_weights_path, target_weights_path)
         print("\n" + "="*60)

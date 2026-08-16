@@ -9,12 +9,7 @@ def remap_and_copy_labels(src_dir, dst_dir):
         src_path = os.path.join(src_dir, filename)
         dst_path = os.path.join(dst_dir, filename)
         
-        # Check collision
-        if os.path.exists(dst_path):
-            print(f"Warning: Label file collision for {filename}. Renaming...")
-            base, ext = os.path.splitext(filename)
-            dst_path = os.path.join(dst_dir, f"{base}_new{ext}")
-            
+
         with open(src_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
             
@@ -46,19 +41,14 @@ def copy_images(src_dir, dst_dir):
         src_path = os.path.join(src_dir, filename)
         dst_path = os.path.join(dst_dir, filename)
         
-        # Check collision
-        if os.path.exists(dst_path):
-            print(f"Warning: Image file collision for {filename}. Renaming...")
-            base, ext = os.path.splitext(filename)
-            dst_path = os.path.join(dst_dir, f"{base}_new{ext}")
-            
+
         shutil.copy2(src_path, dst_path)
 
 def main():
     print("=== ExamVision AI Dataset Merging ===")
     
     cheating_dataset_dir = os.path.abspath(os.path.join("data", "datasets", "phone_chit_detection", "cheating_dataset"))
-    new_labeled_dir = os.path.abspath(os.path.join("data", "datasets", "phone_chit_detection", "new_labeled"))
+    new_labeled_dir = os.path.abspath(os.path.join("data", "datasets", "phone_chit_detection", "new_labeled_refined"))
     
     # 1. Verify existence of directories
     if not os.path.exists(cheating_dataset_dir):

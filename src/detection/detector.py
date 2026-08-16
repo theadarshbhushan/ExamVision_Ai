@@ -10,7 +10,7 @@ class YOLODetector:
     """
     def __init__(self, model_path=None):
         if model_path is None:
-            model_path = os.path.join("models", "phone_chit_detector.pt")
+            model_path = os.path.join("models", "phone_chit_detector_v4.pt")
         
         self.model_path = model_path
         

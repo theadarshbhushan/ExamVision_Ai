@@ -4,7 +4,7 @@ import cv2
 from src.motion.motion_detector import MotionDetector
 from src.motion.event_segmenter import EventSegmenter
 from src.detection.detector import YOLODetector
-from src.snapshot.snapshot_generator import generate_snapshots
+from src.snapshot.snapshot_generator import get_event_peak_frame
 
 class ExamVisionPipeline:
     """
@@ -38,6 +38,8 @@ class ExamVisionPipeline:
         }
         
         # Initialize sub-modules
+        if model_path is None:
+            model_path = os.path.join("models", "phone_chit_detector_v4.pt")
         self.detector = YOLODetector(model_path=model_path)
         self.motion_detector = MotionDetector(config=self.motion_config)
         self.event_segmenter = EventSegmenter(config=self.segmenter_config)
@@ -74,25 +76,23 @@ class ExamVisionPipeline:
         for idx, ev in enumerate(events):
             event_id = f"{idx+1:02d}"
             
-            # Extract zone-cropped before/after snapshots and full-frame copies
-            meta = generate_snapshots(
+            # Extract the peak frame of the event in memory (no disk writing yet)
+            after_frame, after_frame_idx, after_time = get_event_peak_frame(
                 video_path=video_path,
                 event=ev,
                 event_id=event_id,
-                motion_results=motion_results,
-                before_offset=1.0,
-                grid_rows=self.motion_config.get('grid_rows', 3),
-                grid_cols=self.motion_config.get('grid_cols', 3),
-                custom_zones=self.motion_config.get('custom_zones', None)
+                motion_results=motion_results
             )
             
-            after_full_path = meta['after_full_path']
+            # Print seeker info
+            print(f"DEBUG: Event #{event_id} | Zone: {ev['zone_id']} | start_time: {ev['start_time']:.2f}s | end_time: {ev['end_time']:.2f}s | before_frame_idx: {max(0, after_frame_idx - 15)} | after_frame_idx: {after_frame_idx} | Gap: 15")
             
-            # Check cache to avoid duplicate YOLO runs on co-occurring events sharing the same after frame
-            frame_idx_key = meta['after_frame_idx']
-            if frame_idx_key not in detections_cache:
-                after_frame = cv2.imread(after_full_path)
-                if after_frame is not None:
+            detections = []
+            annotated_path = None
+            
+            if after_frame is not None:
+                # Check cache to avoid duplicate YOLO runs on co-occurring events sharing the same after frame
+                if after_frame_idx not in detections_cache:
                     # Save a copy of that EXACT frame (uncropped, full frame) to /data/debug/yolo_input_frames/event_{id}.jpg
                     debug_dir = os.path.join("data", "debug", "yolo_input_frames")
                     os.makedirs(debug_dir, exist_ok=True)
@@ -100,27 +100,27 @@ class ExamVisionPipeline:
                     cv2.imwrite(debug_path, after_frame)
                     
                     # Print metadata details for the frame sent to YOLO
-                    print(f"DEBUG: YOLO Input Frame | Event ID: {event_id} | Frame Index: {frame_idx_key} | Timestamp: {meta['timestamp']}s | Crop Status: full-frame")
-
+                    print(f"DEBUG: YOLO Input Frame | Event ID: {event_id} | Frame Index: {after_frame_idx} | Timestamp: {after_time:.2f}s | Crop Status: full-frame")
+                    
                     yolo_frames_count += 1
                     detections = self.detector.detect_objects(after_frame)
-                    detections_cache[frame_idx_key] = (detections, after_frame)
+                    detections_cache[after_frame_idx] = (detections, after_frame)
                 else:
-                    detections_cache[frame_idx_key] = ([], None)
-            
-            detections, after_frame = detections_cache[frame_idx_key]
-            
-            # If any objects are detected, annotate the full-frame after snapshot
-            annotated_path = None
-            if detections and after_frame is not None:
-                annotated_frame = self._draw_annotations(after_frame, detections)
+                    detections, _ = detections_cache[after_frame_idx]
                 
-                # Save annotated full-frame image
-                output_dir = os.path.dirname(meta['after_path'])
-                annotated_filename = f"event_{event_id}_annotated.jpg"
-                annotated_path = os.path.join(output_dir, annotated_filename)
-                cv2.imwrite(annotated_path, annotated_frame)
-                
+                # If any objects are detected, annotate the full-frame after snapshot and save it
+                if detections:
+                    annotated_frame = self._draw_annotations(after_frame, detections)
+                    
+                    # Save annotated full-frame image inside a video-specific subfolder
+                    video_name = os.path.splitext(os.path.basename(video_path))[0]
+                    output_dir = os.path.join("data", "snapshots", video_name, "annotated")
+                    os.makedirs(output_dir, exist_ok=True)
+                    
+                    annotated_filename = f"event_{event_id}.jpg"
+                    annotated_path = os.path.join(output_dir, annotated_filename)
+                    cv2.imwrite(annotated_path, annotated_frame)
+                    
             results.append({
                 'event_id': event_id,
                 'start_time': ev['start_time'],
@@ -128,8 +128,8 @@ class ExamVisionPipeline:
                 'zone_id': ev['zone_id'],
                 'motion_intensity': ev['avg_motion_intensity'],
                 'detections': detections,
-                'before_snapshot_path': meta['before_path'],
-                'after_snapshot_path': meta['after_path'],
+                'before_snapshot_path': None,
+                'after_snapshot_path': None,
                 'annotated_snapshot_path': annotated_path
             })
             
@@ -161,7 +161,7 @@ class ExamVisionPipeline:
         for det in detections:
             bbox = det['bounding_box']
             x1, y1, x2, y2 = [int(round(coord)) for coord in bbox]
-            label = f"{det['class_name']}: {det['confidence']:.2%}"
+            label = f"{det['class_name']}: {int(round(det['confidence'] * 100))}%"
             
             # Calculate text size
             (text_w, text_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
