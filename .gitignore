@@ -2,6 +2,12 @@
 .venv/
 venv/
 env/
+.venv312/
+
+# Frontend dependencies and cache
+frontend/node_modules/
+frontend/.next/
+node_modules/
 
 # Python cache and temporary files
 __pycache__/
@@ -12,7 +18,7 @@ __pycache__/
 .pytest_cache/
 
 # Datasets (large files should be shared offline or via storage drive)
-data/
+AI-ML/data/
 
 # Archives
 *.zip
@@ -26,14 +32,11 @@ data/
 # YOLOv8 and PyTorch model weight files
 *.pt
 *.pth
-models/
-runs/
+AI-ML/models/
+AI-ML/runs/
 
 # Debug and video artifacts
 *.avi
-detected_events.json
-check_events.py
-inspect_datasets.py
 *.jpg
 *.jpeg
 *.png

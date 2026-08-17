@@ -13,30 +13,21 @@ This system analyzes recorded exam-hall CCTV footage offline. It splits the vide
 
 ## Directory Structure
 ```
-/data
-  /datasets
-    /phone_chit_detection
-      /cheating_dataset   <- Primary dataset for phone/chit fine-tuning
-      /exam_cheating_v1  <- Secondary dataset for fine-tuning
-    /motion_reference
-      /scb_bowturnhead    <- Images sequenced to build test video stream
-    /visual_reference
-      /cctv_exam_monitor  <- Labeled real exam-hall CCTV images reference
-/src
-  /motion
-    - motion_detector.py  <- OpenCV MOG2/KNN background subtraction & morph filters
-    - event_segmenter.py  <- Event grouping state machine with configurable thresholds
-  /detection
-    - detector.py         <- YOLOv8 object detection wrapper (Stub for now)
-  /api
-    - main.py             <- FastAPI backend endpoint (Stub for now)
-  /dashboard
-    - app.py              <- Streamlit frontend control dashboard (Stub for now)
-/tests
-  - generate_test_video.py <- Helper to sequence image folders into a test MP4 video
-  - test_pipeline_manual.py <- Integration script to run and log the full pipeline
-requirements.txt          <- Python dependency definitions
+/AI-ML                    <- Consolidated AI/ML directory
+  /data                   <- Datasets, test footage, snapshots, results (gitignored)
+  /models                 <- Fine-tuned and base YOLO checkpoints (gitignored)
+  /src                    <- Motion estimation, YOLO wrapper, snapshot generation
+  /tests                  <- Pipeline verification and integration tests
+  /docs                   <- Edge-case robustness report
+  requirements.txt        <- AI/ML-specific dependencies
+  README.md               <- AI/ML architecture & operation instructions
+/src                      <- Project backend and frontend dashboard
+  /api                    <- FastAPI backend endpoint (Stub for now)
+  /dashboard              <- Streamlit frontend control dashboard (Stub for now)
+.venv/                    <- Project virtual environment (At root for IDE support)
+.gitignore                <- Global repository ignore rules
 README.md                 <- Setup and operation documentation (This file)
+examvision_ai_flowchart.svg <- Whole-project architecture overview (shared)
 ```
 
 ---
@@ -44,7 +35,7 @@ README.md                 <- Setup and operation documentation (This file)
 ## Setup Instructions
 
 ### 1. Create Virtual Environment and Install Dependencies
-Activate your local python environment and run:
+Activate your local python environment and install backend, dashboard, and AI/ML dependencies:
 ```bash
 # Create virtual environment
 python -m venv .venv
@@ -57,34 +48,18 @@ python -m venv .venv
 # Linux/macOS:
 source .venv/bin/activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install AI/ML dependencies
+pip install -r AI-ML/requirements.txt
 ```
 
 ---
 
 ## Running the Pipeline
 
-### Step 1: Generate the Synthetic Test Video
-Since continuous raw video is not pre-packaged, sequence a series of real classroom images showing head bows and turns:
+Run the integrated motion estimation, event segmentation, and YOLOv8 phone/chit classification pipeline:
 ```bash
-python tests/generate_test_video.py
+python AI-ML/tests/test_full_pipeline.py --video AI-ML/data/test_footage/cctv_real/cctv_01_phone.mkv
 ```
-This output is saved to `test_video.mp4` in the project root.
+This logs segmented events to the terminal, crops event peak snapshots to `AI-ML/data/snapshots/cctv_01_phone/annotated/`, and outputs a JSON metadata list of all events to `AI-ML/data/results/cctv_01_phone_results.json`.
 
-### Step 2: Run the Motion & Event Segmentation Pipeline
-Run the integrated motion estimation and event segmentation on the test video:
-```bash
-python tests/test_pipeline_manual.py
-```
-This logs segmented events to the terminal and outputs a JSON list of events to `detected_events.json`.
- प्रत्येक event include values:
-```json
-{
-  "start_time": 0.0,
-  "end_time": 4.1,
-  "zone_id": 4,
-  "avg_motion_intensity": 0.0357
-}
-```
-where `zone_id` tracks active regions in the $N \times M$ grid overlay.
+Refer to [AI-ML/README.md](AI-ML/README.md) for full documentation on model metrics, configurations, and advanced execution parameters.
