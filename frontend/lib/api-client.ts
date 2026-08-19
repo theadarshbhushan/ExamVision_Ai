@@ -202,6 +202,7 @@ function mapEvent(raw: RawEvent, jobId: string, videoName: string): ProctoringEv
     severity: mapSeverity(raw),
     thumbnail: getSnapshotUrl(raw.annotated_snapshot_url),
     notes: mapNotes(raw),
+    boundingBox: raw.detections && raw.detections.length > 0 ? raw.detections[0].bounding_box : null,
   }
 }
 
@@ -210,4 +211,27 @@ function mapEvent(raw: RawEvent, jobId: string, videoName: string): ProctoringEv
  */
 export function mapResultsToEvents(raw: RawResults, jobId: string): ProctoringEvent[] {
   return raw.events.map((ev) => mapEvent(ev, jobId, raw.video_name))
+}
+
+export type HeatmapZone = {
+  zone_id: number
+  total_intensity: number
+  event_count: number
+}
+
+export type HeatmapResponse = {
+  zones: HeatmapZone[]
+}
+
+/**
+ * Fetch aggregated zone heatmap data for a completed job.
+ */
+export async function getHeatmap(jobId: string): Promise<HeatmapResponse> {
+  const res = await fetch(`${BASE_URL}/heatmap/${jobId}`)
+
+  if (!res.ok) {
+    throw new Error(`Heatmap check failed: ${res.status} ${res.statusText}`)
+  }
+
+  return res.json()
 }

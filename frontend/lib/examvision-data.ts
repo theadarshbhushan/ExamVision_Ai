@@ -26,6 +26,7 @@ export type ProctoringEvent = {
   severity: Severity
   thumbnail: string
   notes: string
+  boundingBox?: [number, number, number, number] | null
 }
 
 export type Alert = {

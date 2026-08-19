@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Play, Check, X, Flag } from "lucide-react"
+import { ArrowLeft, CameraOff, Check, X, Flag } from "lucide-react"
 import type { ProctoringEvent } from "@/lib/examvision-data"
 import { StatusPill, SeverityPill } from "./primitives"
 
@@ -55,24 +55,31 @@ export function EventDetail({
         {/* Evidence panel */}
         <div className="lg:col-span-3">
           <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-            <div className="relative aspect-video bg-secondary">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={event.thumbnail || "/placeholder.svg"}
-                alt={`Evidence frame for ${event.detection} in session ${event.session}`}
-                className="size-full object-cover"
-              />
-              <div className="absolute inset-0 flex items-center justify-center bg-foreground/10">
-                <span className="flex size-14 items-center justify-center rounded-full bg-card/90 text-foreground shadow-sm backdrop-blur">
-                  <Play className="size-6 translate-x-0.5 fill-current" />
-                </span>
-              </div>
-              <span className="absolute left-3 top-3 rounded-md bg-foreground/70 px-2 py-1 font-mono text-xs text-background">
-                00:14:22
-              </span>
-              <span className="absolute right-3 top-3 rounded-md bg-destructive/90 px-2 py-1 text-xs font-medium text-primary-foreground">
-                Detection point
-              </span>
+            <div className="relative aspect-video bg-secondary flex items-center justify-center">
+              {event.thumbnail && event.thumbnail !== "/placeholder.svg" ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={event.thumbnail}
+                    alt={`Evidence frame for ${event.detection} in session ${event.session}`}
+                    className="size-full object-cover animate-fade-in"
+                  />
+                  <span className="absolute left-3 top-3 rounded-md bg-foreground/75 px-2 py-1 font-mono text-xs text-background select-none">
+                    {event.timestamp}
+                  </span>
+                  <span className="absolute right-3 top-3 rounded-md bg-destructive/90 px-2 py-1 text-xs font-medium text-primary-foreground select-none">
+                    Detection snapshot
+                  </span>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-6 text-center select-none">
+                  <CameraOff className="size-10 text-muted-foreground/60 mb-2" />
+                  <p className="text-sm font-semibold text-foreground">No visual snapshot</p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-64">
+                    Motion-only event, no object classified by the AI pipeline.
+                  </p>
+                </div>
+              )}
             </div>
             <div className="border-t border-border p-4">
               <p className="text-sm font-medium text-foreground">Reviewer notes</p>

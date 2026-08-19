@@ -6,7 +6,7 @@ import { ALERTS, EVENTS, type Screen } from "@/lib/examvision-data"
 export function CommandPalette({ open, onClose, onNavigate, onEvent }: { open: boolean; onClose: () => void; onNavigate: (s: Screen) => void; onEvent: (id: string) => void }) {
   const [query, setQuery] = useState("")
   const [active, setActive] = useState(0)
-  const pages = [{ label: "Dashboard", screen: "dashboard" }, { label: "Live monitoring", screen: "live" }, { label: "Student risk trends", screen: "students" }, { label: "Reports", screen: "reports" }] as const
+  const pages = [{ label: "Dashboard", screen: "dashboard" }, { label: "Reports", screen: "reports" }] as const
   const matches = [...pages.filter(x => x.label.toLowerCase().includes(query.toLowerCase())), ...EVENTS.filter(x => `Zone ${x.zone} ${x.exam} ${x.id}`.toLowerCase().includes(query.toLowerCase())).map(x => ({ label: `Zone ${x.zone} — ${x.exam}`, id: x.id }))]
   useEffect(() => { if (!open) return; const key = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); if (e.key === "ArrowDown") { e.preventDefault(); setActive(a => Math.min(a + 1, matches.length - 1)) }; if (e.key === "ArrowUp") { e.preventDefault(); setActive(a => Math.max(a - 1, 0)) }; if (e.key === "Enter" && matches[active]) { const item = matches[active]; "id" in item ? onEvent(item.id) : onNavigate(item.screen); onClose() } }; window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key) }, [open, active, matches, onClose, onEvent, onNavigate])
   if (!open) return null

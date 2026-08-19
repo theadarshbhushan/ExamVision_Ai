@@ -9,8 +9,7 @@ import { cn } from "@/lib/utils"
 type NavKey = "dashboard" | "upload" | "investigations" | "live" | "students" | "alerts" | "reports"
 const NAV = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, screen: "dashboard" }, { key: "upload", label: "Upload", icon: Upload, screen: "upload" },
-  { key: "investigations", label: "Investigations", icon: FolderSearch, screen: "event-detail" }, { key: "live", label: "Live monitoring", icon: Radio, screen: "live" },
-  { key: "students", label: "Student trends", icon: Users, screen: "students" }, { key: "alerts", label: "Alerts", icon: Bell, screen: "alerts" }, { key: "reports", label: "Reports", icon: FileText, screen: "reports" },
+  { key: "investigations", label: "Investigations", icon: FolderSearch, screen: "event-detail" }, { key: "alerts", label: "Alerts", icon: Bell, screen: "alerts" }, { key: "reports", label: "Reports", icon: FileText, screen: "reports" },
 ] as const
 
 const ACCOUNTS = [

@@ -11,7 +11,8 @@ import { Landing } from "@/components/examvision/landing"
 import { AppShell } from "@/components/examvision/app-shell"
 import { Dashboard } from "@/components/examvision/dashboard"
 import { UploadScreen } from "@/components/examvision/upload"
-import { Processing } from "@/components/examvision/processing"
+import { Processing, type PipelineStats } from "@/components/examvision/processing"
+import { type HeatmapZone } from "@/lib/api-client"
 import { EventDetail } from "@/components/examvision/event-detail"
 import { Alerts } from "@/components/examvision/alerts"
 import { Reports } from "@/components/examvision/reports"
@@ -39,6 +40,8 @@ export default function Page() {
   const [events, setEvents] = useState<ProctoringEvent[]>(EVENTS)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
+  const [pipelineStats, setPipelineStats] = useState<PipelineStats | null>(null)
+  const [heatmapZones, setHeatmapZones] = useState<HeatmapZone[] | null>(null)
 
   const selectedEvent = useMemo(
     () => events.find((e) => e.id === selectedId) ?? events.find((e) => e.detection !== "Motion Triggered") ?? events[0] ?? null,
@@ -74,8 +77,10 @@ export default function Page() {
     return (
       <Processing
         jobId={activeJobId}
-        onComplete={(newEvents) => {
+        onComplete={(newEvents, stats, heatmap) => {
           if (newEvents.length > 0) setEvents(newEvents)
+          if (stats) setPipelineStats(stats)
+          if (heatmap) setHeatmapZones(heatmap)
           setScreen("dashboard")
         }}
       />
@@ -93,6 +98,8 @@ export default function Page() {
       {screen === "dashboard" && (
         <Dashboard
           events={events}
+          pipelineStats={pipelineStats}
+          heatmapZones={heatmapZones}
           onOpenEvent={openEvent}
           onUpload={() => setScreen("upload")}
         />

@@ -5,14 +5,20 @@ import { Check, Loader2, AlertTriangle, ArrowLeft } from "lucide-react"
 import { PROCESSING_STEPS, type ProctoringEvent } from "@/lib/examvision-data"
 import { Logo } from "./primitives"
 import { cn } from "@/lib/utils"
-import { getStatus, getResults, mapResultsToEvents } from "@/lib/api-client"
+import { getStatus, getResults, mapResultsToEvents, getHeatmap, type HeatmapZone } from "@/lib/api-client"
+
+export type PipelineStats = {
+  totalFrames: number
+  framesSentToYolo: number
+  bypassRatio: number
+}
 
 export function Processing({
   jobId,
   onComplete,
 }: {
   jobId: string | null
-  onComplete: (events: ProctoringEvent[]) => void
+  onComplete: (events: ProctoringEvent[], stats?: PipelineStats, heatmap?: HeatmapZone[]) => void
 }) {
   const [progress, setProgress] = useState(0)
   const [status, setStatus] = useState<"processing" | "done" | "failed">("processing")
@@ -40,9 +46,23 @@ export function Processing({
           const rawResults = await getResults(jobId)
           const events = mapResultsToEvents(rawResults, jobId)
 
+          let heatmapZones: HeatmapZone[] = []
+          try {
+            const heatmapRes = await getHeatmap(jobId)
+            heatmapZones = heatmapRes.zones
+          } catch (e) {
+            console.error("Error fetching heatmap data:", e)
+          }
+
+          const stats: PipelineStats = {
+            totalFrames: rawResults.total_frames,
+            framesSentToYolo: rawResults.frames_sent_to_yolo,
+            bypassRatio: Math.round(rawResults.bypass_ratio * 10000) / 100
+          }
+
           // Keep the analysis complete message visible for a short duration (900ms) for better UX
           setTimeout(() => {
-            onComplete(events)
+            onComplete(events, stats, heatmapZones)
           }, 900)
         } else if (res.status === "failed") {
           clearInterval(interval)
