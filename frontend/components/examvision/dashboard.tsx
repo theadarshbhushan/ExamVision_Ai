@@ -90,7 +90,7 @@ export function Dashboard({
   const filtered = events.filter((e) => {
     const q = query.toLowerCase()
     return (
-      e.student.toLowerCase().includes(q) ||
+      String(e.zone).toLowerCase().includes(q) ||
       e.exam.toLowerCase().includes(q) ||
       e.detection.toLowerCase().includes(q) ||
       e.id.toLowerCase().includes(q)
@@ -151,7 +151,7 @@ export function Dashboard({
             <thead>
               <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <th className="px-6 py-3">Event</th>
-                <th className="px-6 py-3">Student</th>
+                <th className="px-6 py-3">Zone</th>
                 <th className="px-6 py-3">Detection</th>
                 <th className="px-6 py-3">Confidence</th>
                 <th className="px-6 py-3">Severity</th>
@@ -170,7 +170,7 @@ export function Dashboard({
                     {e.id}
                   </td>
                   <td className="px-6 py-3.5">
-                    <p className="font-medium text-foreground">{e.student}</p>
+                    <p className="font-medium text-foreground">Zone {e.zone}</p>
                     <p className="text-xs text-muted-foreground">{e.exam}</p>
                   </td>
                   <td className="px-6 py-3.5 text-foreground">{e.detection}</td>

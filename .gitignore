@@ -40,3 +40,10 @@ AI-ML/runs/
 *.jpg
 *.jpeg
 *.png
+
+# Local test and debugging outputs
+test_results.json
+test_snapshots/
+
+# Backend transient database and uploaded media files
+Backend/app/data/

@@ -15,7 +15,7 @@ export type Severity = "Critical" | "Medium" | "Low"
 
 export type ProctoringEvent = {
   id: string
-  student: string
+  zone: number
   session: string
   exam: string
   detection: string
@@ -91,7 +91,7 @@ export const FLAG_TREND = [
 export const EVENTS: ProctoringEvent[] = [
   {
     id: "EVT-9F2A41",
-    student: "Marcus Reilly",
+    zone: 8,
     session: "SES-20481",
     exam: "Advanced Microeconomics — Final",
     detection: "Gaze off-screen (repeated)",
@@ -105,7 +105,7 @@ export const EVENTS: ProctoringEvent[] = [
   },
   {
     id: "EVT-7C8B03",
-    student: "Priya Nair",
+    zone: 3,
     session: "SES-20477",
     exam: "Organic Chemistry — Midterm",
     detection: "Second person detected",
@@ -119,7 +119,7 @@ export const EVENTS: ProctoringEvent[] = [
   },
   {
     id: "EVT-5A1D77",
-    student: "Daniel Okonkwo",
+    zone: 4,
     session: "SES-20470",
     exam: "Data Structures — Quiz 4",
     detection: "Tab switch detected",
@@ -133,7 +133,7 @@ export const EVENTS: ProctoringEvent[] = [
   },
   {
     id: "EVT-4B9E12",
-    student: "Sofia Marchetti",
+    zone: 7,
     session: "SES-20465",
     exam: "Constitutional Law — Final",
     detection: "Background noise spike",
@@ -147,7 +147,7 @@ export const EVENTS: ProctoringEvent[] = [
   },
   {
     id: "EVT-3E7C56",
-    student: "Aiden Zhang",
+    zone: 5,
     session: "SES-20459",
     exam: "Calculus II — Midterm",
     detection: "Phone-shaped object",
@@ -161,7 +161,7 @@ export const EVENTS: ProctoringEvent[] = [
   },
   {
     id: "EVT-2D6A98",
-    student: "Hannah Berg",
+    zone: 6,
     session: "SES-20451",
     exam: "World History — Quiz 2",
     detection: "Face not detected",
@@ -175,7 +175,7 @@ export const EVENTS: ProctoringEvent[] = [
   },
   {
     id: "EVT-1C5F30",
-    student: "Liam Foster",
+    zone: 2,
     session: "SES-20444",
     exam: "Statistics — Final",
     detection: "Lighting change",

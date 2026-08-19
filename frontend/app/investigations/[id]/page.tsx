@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { AppShell } from "@/components/examvision/app-shell"
-import { Investigation } from "@/components/examvision/investigation"
+import { EventDetail } from "@/components/examvision/event-detail"
 import { ALERTS, EVENTS, type ProctoringEvent, type Screen } from "@/lib/examvision-data"
 
 export default function InvestigationPage() {
@@ -32,10 +32,11 @@ export default function InvestigationPage() {
       alertCount={ALERTS.length}
       onOpenEvent={(id) => router.push(`/investigations/${id}`)}
     >
-      <Investigation
+      <EventDetail
         event={event}
         onBack={() => router.push("/")}
-        onDecide={decideEvent}
+        onViolation={(id) => decideEvent(id, "Flagged")}
+        onDismiss={(id) => decideEvent(id, "Cleared")}
       />
     </AppShell>
   )

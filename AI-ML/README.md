@@ -27,7 +27,7 @@ The fine-tuned object detection model (**Model v4**) was evaluated on our locked
    ```
 
 2. **Download Model Checkpoint:**
-   Download the fine-tuned model weights file `phone_chit_detector_v4.pt` from the **[PLACEHOLDER LINK]** and place it inside the `AI-ML/models/` folder:
+   Download the fine-tuned model weights file `phone_chit_detector_v4.pt` from https://github.com/theadarshbhushan/ExamVision_Ai/releases/download/v1.0-model/phone_chit_detector_v4.pt and place it inside the `AI-ML/models/` folder:
    ```bash
    AI-ML/models/phone_chit_detector_v4.pt
    ```
@@ -39,7 +39,7 @@ The fine-tuned object detection model (**Model v4**) was evaluated on our locked
 To process a video file through the entire pipeline (motion detection, event segmentation, YOLOv8 classification, snapshot cropping, and JSON output generation), run:
 
 ```bash
-python AI-ML/tests/test_full_pipeline.py --video data/test_footage/cctv_real/cctv_01_phone.mkv
+python AI-ML/tests/test_full_pipeline.py --video AI-ML/data/test_footage/cctv_real/cctv_01_phone.mkv
 ```
 
 The script will:

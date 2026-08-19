@@ -7,7 +7,7 @@ reshaping `pipeline.py`'s output JSON into the agreed response shape.
 ## Setup
 
 ```bash
-cd examvision_backend
+cd Backend
 python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -16,32 +16,24 @@ pip install -r requirements.txt
 ## Run
 
 ```bash
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --port 8000
 ```
+
+> [!IMPORTANT]
+> **Do not use `--reload` in production/demo run**: Enabling `--reload` makes uvicorn watch the `app/data/` folder. When the pipeline subprocess writes temporary files to `app/data/`, uvicorn restarts the server, killing the active subprocess and leaving jobs orphaned. If hot-reload is required for development, launch uvicorn with `--reload-exclude "app/data"` (no trailing `/*` — on Windows PowerShell, the wildcard gets expanded by the shell before uvicorn sees it, causing an 'unexpected extra arguments' error). This has not been fully verified working — dropping `--reload` entirely, as shown in the Run command above, is the tested and confirmed approach.
 
 Docs at `http://localhost:8000/docs` — Streamlit team can hit these directly.
 
-## Wiring up the real pipeline.py (do this first)
+## Integration with the AI/ML pipeline.py
 
-1. Set `PIPELINE_SCRIPT_PATH` in `app/config.py` to the real path of
-   `pipeline.py` (defaults to `../../AI-ML/src/pipeline.py` relative to `app/`).
-2. `pipeline_runner.py` currently calls it as:
-   ```
-   python pipeline.py --input <video> --output <json> --snapshot-dir <dir>
-   ```
-   Confirm with the AI/ML teammate what CLI args `pipeline.py` actually
-   accepts (or what function signature it exposes, if you'd rather import it
-   directly instead of subprocess) and edit the `cmd = [...]` list in
-   `run_pipeline_job()` to match.
-3. `_reshape_to_contract()` in `pipeline_runner.py` maps pipeline.py's raw
-   field names (`label`/`class_name`, `conf`/`confidence`, `bbox`/
-   `bounding_box`, snapshot path fields) onto the contract's field names.
-   Once you see real output JSON from pipeline.py, adjust the `.get(...)`
-   fallbacks so nothing silently comes back `None`.
+The backend is fully wired up and integrated with the AI/ML pipeline:
 
-Until that's wired up, `/upload` will still accept files and create jobs,
-but `/status` will report `"failed"` because `pipeline.py` isn't found at
-the configured path — that's expected until step 1 is done.
+1. `PIPELINE_SCRIPT_PATH` in `app/config.py` points to the real `AI-ML/src/pipeline.py` location.
+2. `PIPELINE_PYTHON_PATH` in `app/config.py` automatically detects and invokes the AI/ML virtual environment (`.venv`) so that uvicorn/FastAPI subprocesses can access `ultralytics` and other ML dependencies.
+3. `pipeline_runner.py` executes the pipeline via subprocess with arguments `--input`, `--output`, and `--snapshot-dir`.
+4. `_reshape_to_contract()` in `pipeline_runner.py` maps the pipeline's raw output JSON onto the required API contract schemas, and copies generated snapshots into the server's snapshot directory for hosting.
+
+Calling `/upload` will now accept video files, queue a pipeline runner task in the background, update execution progress logs, copy snapshot frames, and store formatted JSON results.
 
 ## Endpoints (exact contract)
 

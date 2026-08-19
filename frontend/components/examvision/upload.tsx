@@ -1,25 +1,39 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { UploadCloud, FileVideo, X, Film } from "lucide-react"
+import { UploadCloud, FileVideo, X, Film, Loader2 } from "lucide-react"
+import { uploadVideo } from "@/lib/api-client"
 
-type SelectedFile = { name: string; size: string }
-
-const SAMPLE_FILES = [
-  { name: "SES-20492_econ401_final.mp4", size: "428.6 MB" },
-  { name: "SES-20493_chem210_mid.mp4", size: "312.1 MB" },
-  { name: "batch_registrar_aug11.zip", size: "1.8 GB" },
-]
-
-export function UploadScreen({ onStart }: { onStart: () => void }) {
-  const [file, setFile] = useState<SelectedFile | null>(null)
+export function UploadScreen({ onStart }: { onStart: (jobId: string) => void }) {
+  const [file, setFile] = useState<File | null>(null)
   const [dragging, setDragging] = useState(false)
-  const sampleIndex = useRef(0)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  function pickSample() {
-    const next = SAMPLE_FILES[sampleIndex.current % SAMPLE_FILES.length]
-    sampleIndex.current += 1
-    setFile(next)
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files && e.target.files.length > 0) {
+      setFile(e.target.files[0])
+      setError(null)
+    }
+  }
+
+  async function handleStart() {
+    if (!file) return
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await uploadVideo(file)
+      onStart(response.job_id)
+    } catch (err: any) {
+      setError(err.message || "Something went wrong during file upload.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function getReadableSize(bytes: number): string {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   return (
@@ -34,10 +48,20 @@ export function UploadScreen({ onStart }: { onStart: () => void }) {
       </div>
 
       <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+        {/* Hidden File Input */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept="video/*,.zip"
+          className="hidden"
+          disabled={loading}
+        />
+
         {!file ? (
           <button
             type="button"
-            onClick={pickSample}
+            onClick={() => fileInputRef.current?.click()}
             onDragOver={(e) => {
               e.preventDefault()
               setDragging(true)
@@ -46,7 +70,10 @@ export function UploadScreen({ onStart }: { onStart: () => void }) {
             onDrop={(e) => {
               e.preventDefault()
               setDragging(false)
-              pickSample()
+              if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                setFile(e.dataTransfer.files[0])
+                setError(null)
+              }
             }}
             className={`flex w-full flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-16 text-center transition-colors ${
               dragging
@@ -74,7 +101,7 @@ export function UploadScreen({ onStart }: { onStart: () => void }) {
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium text-foreground">{file.name}</p>
-              <p className="text-sm text-muted-foreground">{file.size}</p>
+              <p className="text-sm text-muted-foreground">{getReadableSize(file.size)}</p>
               <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Film className="size-3.5" />
                 Ready to analyze
@@ -82,7 +109,8 @@ export function UploadScreen({ onStart }: { onStart: () => void }) {
             </div>
             <button
               onClick={() => setFile(null)}
-              className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              disabled={loading}
+              className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
               aria-label="Remove file"
             >
               <X className="size-4" />
@@ -90,20 +118,31 @@ export function UploadScreen({ onStart }: { onStart: () => void }) {
           </div>
         )}
 
+        {/* Error Alert */}
+        {error && (
+          <div className="mt-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
         <div className="mt-6 flex items-center justify-end gap-3">
           <button
-            onClick={() => setFile(null)}
-            disabled={!file}
+            onClick={() => {
+              setFile(null)
+              setError(null)
+            }}
+            disabled={!file || loading}
             className="inline-flex h-9 items-center rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
           >
             Cancel
           </button>
           <button
-            onClick={onStart}
-            disabled={!file}
+            onClick={handleStart}
+            disabled={!file || loading}
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
           >
-            Start analysis
+            {loading && <Loader2 className="size-4 animate-spin" />}
+            {loading ? "Uploading..." : "Start analysis"}
           </button>
         </div>
       </div>

@@ -20,6 +20,28 @@ for d in [UPLOADS_DIR, RESULTS_DIR, SNAPSHOTS_DIR, STATUS_DIR, REVIEWS_DIR]:
 # Point this at the AI/ML team's real pipeline.py location.
 PIPELINE_SCRIPT_PATH = BASE_DIR.parent.parent / "AI-ML" / "src" / "pipeline.py"
 
+# Try to find the AI/ML venv Python executable, fallback to sys.executable
+import sys
+_venv_win = BASE_DIR.parent.parent / ".venv" / "Scripts" / "python.exe"
+_venv_unix = BASE_DIR.parent.parent / ".venv" / "bin" / "python"
+if _venv_win.exists():
+    PIPELINE_PYTHON_PATH = _venv_win
+elif _venv_unix.exists():
+    PIPELINE_PYTHON_PATH = _venv_unix
+else:
+    print("WARNING: Could not find default AI-ML virtual environment '.venv' at project root. Attempting fallbacks...", flush=True)
+    _venv312_win = BASE_DIR.parent.parent / ".venv312" / "Scripts" / "python.exe"
+    _venv312_unix = BASE_DIR.parent.parent / ".venv312" / "bin" / "python"
+    if _venv312_win.exists():
+        PIPELINE_PYTHON_PATH = _venv312_win
+        print(f"Fallback resolution: Using '.venv312' virtual environment at: {PIPELINE_PYTHON_PATH}", flush=True)
+    elif _venv312_unix.exists():
+        PIPELINE_PYTHON_PATH = _venv312_unix
+        print(f"Fallback resolution: Using '.venv312' virtual environment at: {PIPELINE_PYTHON_PATH}", flush=True)
+    else:
+        PIPELINE_PYTHON_PATH = Path(sys.executable)
+        print(f"CRITICAL WARNING: No dedicated AI-ML virtual environment found. Running pipeline under current uvicorn process Python context: {PIPELINE_PYTHON_PATH}", flush=True)
+
 MONGO_URI = os.getenv("MONGO_URI")
 if not MONGO_URI:
     raise RuntimeError("Missing required environment variable: MONGO_URI. Set it in Backend/.env.")

@@ -88,7 +88,7 @@ export function EventDetail({
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <h3 className="text-sm font-semibold text-foreground">Details</h3>
             <div className="mt-2">
-              <MetaRow label="Student">{event.student}</MetaRow>
+              <MetaRow label="Zone">Zone {event.zone}</MetaRow>
               <MetaRow label="Exam">{event.exam}</MetaRow>
               <MetaRow label="Session">
                 <span className="font-mono text-xs">{event.session}</span>

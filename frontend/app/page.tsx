@@ -26,7 +26,7 @@ const SCREEN_TO_NAV: Record<Screen, NavKey> = {
   dashboard: "dashboard",
   upload: "upload",
   processing: "upload",
-  "event-detail": "dashboard",
+  "event-detail": "investigations",
   investigation: "investigations",
   live: "live",
   students: "students",
@@ -38,15 +38,16 @@ export default function Page() {
   const [screen, setScreen] = useState<Screen>("landing")
   const [events, setEvents] = useState<ProctoringEvent[]>(EVENTS)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [activeJobId, setActiveJobId] = useState<string | null>(null)
 
   const selectedEvent = useMemo(
-    () => events.find((e) => e.id === selectedId) ?? null,
+    () => events.find((e) => e.id === selectedId) ?? events.find((e) => e.detection !== "Motion Triggered") ?? events[0] ?? null,
     [events, selectedId],
   )
 
   function openEvent(id: string) {
     setSelectedId(id)
-    setScreen("investigation")
+    setScreen("event-detail")
   }
 
   function decideEvent(id: string, status: "Flagged" | "Cleared") {
@@ -70,7 +71,15 @@ export default function Page() {
   }
 
   if (screen === "processing") {
-    return <Processing onComplete={() => setScreen("dashboard")} />
+    return (
+      <Processing
+        jobId={activeJobId}
+        onComplete={(newEvents) => {
+          if (newEvents.length > 0) setEvents(newEvents)
+          setScreen("dashboard")
+        }}
+      />
+    )
   }
 
   return (
@@ -89,7 +98,12 @@ export default function Page() {
         />
       )}
       {screen === "upload" && (
-        <UploadScreen onStart={() => setScreen("processing")} />
+        <UploadScreen
+          onStart={(jobId) => {
+            setActiveJobId(jobId)
+            setScreen("processing")
+          }}
+        />
       )}
       {screen === "event-detail" && selectedEvent && (
         <EventDetail

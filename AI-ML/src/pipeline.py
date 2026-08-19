@@ -1,4 +1,7 @@
 import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import json
 import cv2
 from src.motion.motion_detector import MotionDetector
@@ -160,7 +163,7 @@ class ExamVisionPipeline:
         for det in detections:
             bbox = det['bounding_box']
             x1, y1, x2, y2 = [int(round(coord)) for coord in bbox]
-            label = f"{det['class_name']}: {int(round(det['confidence'] * 100))}%"
+            label = f"{det['class_name']}"
             
             # Calculate text size
             (text_w, text_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
@@ -191,3 +194,76 @@ def run_pipeline(video_path, model_path=None, motion_config=None, segmenter_conf
         segmenter_config=segmenter_config
     )
     return pipeline.process_video(video_path)
+
+
+if __name__ == "__main__":
+    import argparse
+    import shutil
+    import sys
+    
+    parser = argparse.ArgumentParser(description="ExamVision AI Pipeline CLI")
+    parser.add_argument("--input", required=True, help="Path to input video file")
+    parser.add_argument("--output", required=True, help="Path to save results JSON")
+    parser.add_argument("--snapshot-dir", required=True, help="Directory to save snapshots")
+    
+    args = parser.parse_args()
+    
+    try:
+        if not os.path.exists(args.input):
+            print(f"Error: Input video not found at {args.input}", file=sys.stderr)
+            sys.exit(1)
+            
+        # Instantiate and run pipeline
+        pipeline = ExamVisionPipeline()
+        output = pipeline.process_video(args.input)
+        
+        # Ensure snapshot directory exists
+        os.makedirs(args.snapshot_dir, exist_ok=True)
+        
+        # Post-process events: copy snapshots and map keys for backend compatibility
+        reshaped_events = []
+        for ev in output.get("events", []):
+            event_id = ev["event_id"]
+            ann_path = ev.get("annotated_snapshot_path")
+            
+            copied_snapshot_path = None
+            if ann_path and os.path.exists(ann_path):
+                dest_path = os.path.join(args.snapshot_dir, f"event_{event_id}.jpg")
+                shutil.copy2(ann_path, dest_path)
+                copied_snapshot_path = dest_path
+            
+            # Map keys to match the backend expectations
+            reshaped_ev = {
+                "event_id": ev["event_id"],
+                "start_time": ev["start_time"],
+                "end_time": ev["end_time"],
+                "zone_id": ev["zone_id"],
+                "motion_intensity": ev["motion_intensity"],
+                "detections": ev["detections"],
+                "before_snapshot": None,
+                "after_snapshot": None,
+                "annotated_snapshot": copied_snapshot_path
+            }
+            reshaped_events.append(reshaped_ev)
+            
+        # Structure the final JSON output matching the ResultsResponse expectation
+        final_output = {
+            "video_name": os.path.splitext(os.path.basename(args.input))[0],
+            "total_frames": output.get("total_frames", 0),
+            "frames_sent_to_yolo": output.get("yolo_frames", 0),
+            "events": reshaped_events
+        }
+        
+        # Write to requested output path
+        with open(args.output, "w") as f:
+            json.dump(final_output, f, indent=2)
+            
+        print(f"Success: Results written to {args.output}")
+        sys.exit(0)
+        
+    except Exception as e:
+        import traceback
+        print(f"Error executing pipeline: {e}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)
+

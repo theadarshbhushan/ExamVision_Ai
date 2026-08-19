@@ -18,6 +18,7 @@ import traceback
 from pathlib import Path
 
 from app.config import (
+    PIPELINE_PYTHON_PATH,
     PIPELINE_SCRIPT_PATH,
     RESULTS_DIR,
     SNAPSHOTS_DIR,
@@ -94,7 +95,7 @@ def run_pipeline_job(job_id: str, video_path: Path):
 
         # --- subprocess mode: adjust argv to match pipeline.py's real CLI ---
         cmd = [
-            sys.executable,
+            str(PIPELINE_PYTHON_PATH),
             str(PIPELINE_SCRIPT_PATH),
             "--input", str(video_path),
             "--output", str(raw_output_path),
