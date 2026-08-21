@@ -37,7 +37,7 @@ function UserMenu({ onSignOut }: { onSignOut: () => void }) {
 }
 
 export function AppShell({ active, onNavigate, onSignOut, alertCount, onOpenEvent, children }: { active: NavKey; onNavigate: (screen: Screen) => void; onSignOut: () => void; alertCount: number; onOpenEvent: (id: string) => void; children: React.ReactNode }) {
-  const [palette, setPalette] = useState(false), [notifications, setNotifications] = useState(false), [dark, setDark] = useState(true)
+  const [palette, setPalette] = useState(false), [notifications, setNotifications] = useState(false), [dark, setDark] = useState(false)
   useEffect(() => { const key = (e: KeyboardEvent) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPalette(true) } }; window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key) }, [])
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark)

@@ -8,6 +8,7 @@ class YOLODetector:
     YOLOv8 wrapper for detecting exam cheating tools (phones, chits, supplement passing, etc.).
     Fine-tuned on cheating_dataset.
     """
+    DETECTION_CONFIDENCE_THRESHOLD = 0.25
     def __init__(self, model_path=None):
         if model_path is None:
             pkg_model = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "models", "phone_chit_detector_v4.pt"))
@@ -53,7 +54,7 @@ class YOLODetector:
             raise RuntimeError("Model is not loaded. Cannot run inference.")
             
         # Run inference (verbose=False keeps stdout clean)
-        results = self.model(frame, verbose=False)
+        results = self.model(frame, conf=self.DETECTION_CONFIDENCE_THRESHOLD, verbose=False)
         
         detections = []
         for r in results:

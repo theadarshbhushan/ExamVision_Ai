@@ -66,6 +66,8 @@ def _reshape_to_contract(raw: dict, job_id: str) -> dict:
                 if ev.get("after_snapshot") else None,
                 "annotated_snapshot_url": f"/snapshot/{job_id}/{Path(ev.get('annotated_snapshot', '')).name}"
                 if ev.get("annotated_snapshot") else None,
+                "reference_snapshot_url": f"/snapshot/{job_id}/{Path(ev.get('reference_snapshot', '')).name}"
+                if ev.get("reference_snapshot") else None,
             }
         )
 
