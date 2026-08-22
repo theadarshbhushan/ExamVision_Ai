@@ -40,40 +40,28 @@ def _patched_half(self, *args, **kwargs):
 torch.nn.Module.half = _patched_half
 
 def main():
-    print("=== Training YOLOv8 Cheat Detector v8 (CCTV Fine-Tuning) ===")
+    print("=== Training YOLOv8 Cheat Detector v7 ===")
     
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     models_dir = os.path.abspath(os.path.join(base_dir, "models"))
     os.makedirs(models_dir, exist_ok=True)
     
-    # 1. Load pretrained Model v4 backbone (retains base feature detection)
-    v4_model_path = os.path.join(models_dir, "phone_chit_detector_v4.pt")
-    if os.path.exists(v4_model_path):
-        print(f"Loading base weights from: {v4_model_path}")
-        model = YOLO(v4_model_path)
-    else:
-        print("Model v4 not found in models/ - falling back to pretrained yolov8n.pt")
-        model = YOLO("yolov8n.pt")
+    # 1. Load pretrained YOLOv8n model (nano)
+    print("Loading pretrained YOLOv8n weights...")
+    model = YOLO("yolov8n.pt")
     
-    # 2. Dataset path (cctv_labeled_v2)
-    candidate_yamls = [
-        os.path.join(base_dir, "data", "datasets", "phone_chit_detection", "cctv_labeled_v2", "data.yaml"),
-        os.path.join(base_dir, "data", "datasets", "cctv_labeled_v2", "data.yaml"),
-        os.path.join(base_dir, "data", "cctv_labeled_v2", "data.yaml")
-    ]
-    
-    dataset_yaml = next((y for y in candidate_yamls if os.path.exists(y)), None)
-    if not dataset_yaml:
-        raise FileNotFoundError(f"Could not locate data.yaml in expected folders: {candidate_yamls}")
-    
+    # 2. Define dataset data.yaml path
+    dataset_yaml = os.path.abspath(
+        os.path.join(base_dir, "data", "datasets", "phone_chit_detection", "cheating_dataset", "data.yaml")
+    )
     print(f"Using Dataset YAML: {dataset_yaml}")
     
-    # 3. Fine-tuning parameters for wide-angle CCTV / tiny objects
-    epochs = 60
-    imgsz = 1280
-    batch = 8
+    # 3. Fine-tuning parameters for v7
+    epochs = 30
+    imgsz = 640
+    batch = 16
     device = 0
-    run_name = "train_cctv_v8"
+    run_name = "train_cheating_v7"
     
     print(f"Starting training on device={device} for {epochs} epochs at imgsz={imgsz} (batch={batch})...")
     try:
@@ -105,7 +93,7 @@ def main():
             saved_weight = matches[0]
             break
             
-    target_weights_path = os.path.join(models_dir, "phone_chit_detector_v8.pt")
+    target_weights_path = os.path.join(models_dir, "phone_chit_detector_v7.pt")
     
     if saved_weight and os.path.exists(saved_weight):
         shutil.copy2(saved_weight, target_weights_path)
