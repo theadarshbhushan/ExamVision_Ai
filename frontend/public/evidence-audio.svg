@@ -1,0 +1,24 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="16" fill="url(#audioBg)"/>
+  <defs>
+    <linearGradient id="audioBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#dbeafe"/>
+      <stop offset="100%" stopColor="#bfdbfe"/>
+    </linearGradient>
+  </defs>
+  <!-- Waveform bars -->
+  <g fill="#2563eb">
+    <rect x="18" y="58" width="4" height="12" rx="2" fill-opacity="0.5"/>
+    <rect x="26" y="52" width="4" height="24" rx="2" fill-opacity="0.6"/>
+    <rect x="34" y="44" width="4" height="40" rx="2" fill-opacity="0.75"/>
+    <rect x="42" y="36" width="4" height="56" rx="2"/>
+    <rect x="50" y="48" width="4" height="32" rx="2"/>
+    <rect x="58" y="30" width="4" height="68" rx="2"/>
+    <rect x="66" y="40" width="4" height="48" rx="2"/>
+    <rect x="74" y="24" width="4" height="80" rx="2"/>
+    <rect x="82" y="38" width="4" height="52" rx="2"/>
+    <rect x="90" y="46" width="4" height="36" rx="2"/>
+    <rect x="98" y="54" width="4" height="20" rx="2" fill-opacity="0.75"/>
+    <rect x="106" y="60" width="4" height="8" rx="2" fill-opacity="0.5"/>
+  </g>
+</svg>

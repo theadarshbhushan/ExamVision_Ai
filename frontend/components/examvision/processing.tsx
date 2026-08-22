@@ -9,6 +9,7 @@ import { getStatus, getResults, mapResultsToEvents, getHeatmap, type HeatmapZone
 
 export type PipelineStats = {
   totalFrames: number
+  totalDuration?: number
   framesSentToYolo: number
   bypassRatio: number
 }
@@ -56,6 +57,7 @@ export function Processing({
 
           const stats: PipelineStats = {
             totalFrames: rawResults.total_frames,
+            totalDuration: rawResults.total_duration,
             framesSentToYolo: rawResults.frames_sent_to_yolo,
             bypassRatio: Math.round(rawResults.bypass_ratio * 10000) / 100
           }

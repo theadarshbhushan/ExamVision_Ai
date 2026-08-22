@@ -44,6 +44,12 @@ def _reshape_to_contract(raw: dict, job_id: str) -> dict:
     """
     events_out = []
     for ev in raw.get("events", []):
+        def _snapshot_url(snapshot_key: str) -> str | None:
+            snapshot_path = ev.get(snapshot_key)
+            if not snapshot_path:
+                return None
+            return f"/snapshot/{job_id}/{Path(snapshot_path).name}"
+
         detections = [
             {
                 "class_name": d.get("class_name") or d.get("label"),
@@ -60,12 +66,9 @@ def _reshape_to_contract(raw: dict, job_id: str) -> dict:
                 "zone_id": ev.get("zone_id"),
                 "motion_intensity": ev.get("motion_intensity", 0.0),
                 "detections": detections,
-                "before_snapshot_url": f"/snapshot/{job_id}/{Path(ev.get('before_snapshot', '')).name}"
-                if ev.get("before_snapshot") else None,
-                "after_snapshot_url": f"/snapshot/{job_id}/{Path(ev.get('after_snapshot', '')).name}"
-                if ev.get("after_snapshot") else None,
-                "annotated_snapshot_url": f"/snapshot/{job_id}/{Path(ev.get('annotated_snapshot', '')).name}"
-                if ev.get("annotated_snapshot") else None,
+                "before_snapshot_url": _snapshot_url("before_snapshot"),
+                "after_snapshot_url": _snapshot_url("after_snapshot"),
+                "annotated_snapshot_url": _snapshot_url("annotated_snapshot"),
             }
         )
 
@@ -78,6 +81,7 @@ def _reshape_to_contract(raw: dict, job_id: str) -> dict:
     return {
         "video_name": raw.get("video_name", ""),
         "total_frames": total_frames,
+        "total_duration": raw.get("total_duration"),
         "frames_sent_to_yolo": frames_to_yolo,
         "bypass_ratio": bypass_ratio or 0.0,
         "events": events_out,
@@ -111,6 +115,13 @@ def run_pipeline_job(job_id: str, video_path: Path):
         _write_status(job_id, "processing", 80)
         raw = json.loads(raw_output_path.read_text())
         contract = _reshape_to_contract(raw, job_id)
+        for ev in raw.get("events", []):
+            for snapshot_key in ("before_snapshot", "after_snapshot", "annotated_snapshot"):
+                snapshot_path = ev.get(snapshot_key)
+                if snapshot_path and Path(snapshot_path).exists():
+                    dest_path = job_snapshot_dir / Path(snapshot_path).name
+                    if not dest_path.exists():
+                        dest_path.write_bytes(Path(snapshot_path).read_bytes())
         (RESULTS_DIR / f"{job_id}.json").write_text(json.dumps(contract))
 
         _write_status(job_id, "done", 100)

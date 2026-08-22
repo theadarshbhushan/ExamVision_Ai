@@ -47,3 +47,7 @@ test_snapshots/
 
 # Backend transient database and uploaded media files
 Backend/app/data/
+AI-ML/
+frontend_old/
+.venv/
+.pytest_cache/
