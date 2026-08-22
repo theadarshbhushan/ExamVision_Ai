@@ -53,6 +53,13 @@ class ExamVisionPipeline:
         if not os.path.exists(video_path):
             raise FileNotFoundError(f"Video file not found at: {video_path}")
 
+        # Parse clean video name and initialize target directory layout
+        video_name = os.path.splitext(os.path.basename(video_path))[0]
+        ref_dir = os.path.abspath(os.path.join(self.data_dir, "snapshots", video_name, "reference"))
+        ann_dir = os.path.abspath(os.path.join(self.data_dir, "snapshots", video_name, "annotated"))
+        os.makedirs(ref_dir, exist_ok=True)
+        os.makedirs(ann_dir, exist_ok=True)
+
         # 1. Retrieve total frames, fps, and video properties
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
@@ -97,15 +104,19 @@ class ExamVisionPipeline:
             before_path = None
             after_path = None
             annotated_path = None
+            ref_path = None
             
             if after_frame is not None:
-                video_name = os.path.splitext(os.path.basename(video_path))[0]
                 output_dir = os.path.join(self.data_dir, "snapshots", video_name)
                 os.makedirs(output_dir, exist_ok=True)
 
                 after_filename = f"event_{event_id}_after.jpg"
                 after_path = os.path.join(output_dir, after_filename)
                 cv2.imwrite(after_path, after_frame)
+
+                ref_filename = f"event_{event_id}.jpg"
+                ref_path = os.path.join(ref_dir, ref_filename)
+                cv2.imwrite(ref_path, after_frame)
 
                 # Check cache to avoid duplicate YOLO runs on co-occurring events sharing the same after frame
                 if after_frame_idx not in detections_cache:
@@ -133,11 +144,8 @@ class ExamVisionPipeline:
                 )
                 
                 # Save annotated full-frame image inside a video-specific subfolder
-                output_dir = os.path.join(self.data_dir, "snapshots", video_name, "annotated")
-                os.makedirs(output_dir, exist_ok=True)
-                
                 annotated_filename = f"event_{event_id}.jpg"
-                annotated_path = os.path.join(output_dir, annotated_filename)
+                annotated_path = os.path.join(ann_dir, annotated_filename)
                 cv2.imwrite(annotated_path, annotated_frame)
                     
             results.append({
@@ -149,7 +157,8 @@ class ExamVisionPipeline:
                 'detections': detections,
                 'before_snapshot_path': before_path,
                 'after_snapshot_path': after_path,
-                'annotated_snapshot_path': annotated_path
+                'annotated_snapshot_path': annotated_path,
+                'reference_snapshot_path': ref_path
             })
             
         # 5. Save results to results JSON
@@ -195,7 +204,7 @@ class ExamVisionPipeline:
                     cv2.rectangle(annotated, (x1, y1), (x1 + text_w + 10, y1 + text_h + 10), (0, 0, 255), -1)
                     cv2.putText(annotated, label, (x1 + 5, y1 + text_h + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
                 else:
-                    # Place text box above the bounding box boundary
+                    # Place text box above the boundary
                     cv2.rectangle(annotated, (x1, y1 - text_h - 10), (x1 + text_w + 10, y1), (0, 0, 255), -1)
                     cv2.putText(annotated, label, (x1 + 5, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
                     
@@ -268,6 +277,7 @@ if __name__ == "__main__":
             event_id = ev["event_id"]
             ann_path = ev.get("annotated_snapshot_path")
             after_path = ev.get("after_snapshot_path")
+            ref_path = ev.get("reference_snapshot_path")
             
             copied_ann_path = None
             if ann_path and os.path.exists(ann_path):
@@ -281,6 +291,12 @@ if __name__ == "__main__":
                 shutil.copy2(after_path, dest_after)
                 copied_after_path = dest_after
             
+            copied_ref_path = None
+            if ref_path and os.path.exists(ref_path):
+                dest_ref_path = os.path.join(args.snapshot_dir, f"event_{event_id}_ref.jpg")
+                shutil.copy2(ref_path, dest_ref_path)
+                copied_ref_path = dest_ref_path
+            
             # Map keys to match the backend expectations
             reshaped_ev = {
                 "event_id": ev["event_id"],
@@ -291,7 +307,8 @@ if __name__ == "__main__":
                 "detections": ev["detections"],
                 "before_snapshot": None,
                 "after_snapshot": copied_after_path,
-                "annotated_snapshot": copied_ann_path
+                "annotated_snapshot": copied_ann_path,
+                "reference_snapshot": copied_ref_path
             }
             reshaped_events.append(reshaped_ev)
             
@@ -316,4 +333,3 @@ if __name__ == "__main__":
         print(f"Error executing pipeline: {e}", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
-

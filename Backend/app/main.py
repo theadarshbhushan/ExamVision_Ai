@@ -19,6 +19,7 @@ from app.auth import (
     verify_password,
 )
 from app.config import (
+    BASE_DIR,
     COOKIE_SECURE,
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES,
     RESULTS_DIR,
@@ -633,7 +634,26 @@ async def get_results(job_id: str):
 async def get_snapshot(job_id: str, filename: str):
     path = SNAPSHOTS_DIR / job_id / filename
     if not path.exists():
+        ref_filename = filename.replace(".jpg", "_ref.jpg")
+        ref_path = SNAPSHOTS_DIR / job_id / ref_filename
+        if ref_path.exists():
+            return FileResponse(ref_path)
         raise HTTPException(status_code=404, detail="snapshot not found")
+    return FileResponse(path)
+
+
+@app.get("/api/snapshots/{video_name}/{type}/{filename}")
+async def get_api_snapshot(video_name: str, type: str, filename: str):
+    base_snapshots_dir = BASE_DIR.parent.parent / "AI-ML" / "data" / "snapshots"
+    path = base_snapshots_dir / video_name / type / filename
+    
+    if not path.exists():
+        if type == "annotated":
+            ref_path = base_snapshots_dir / video_name / "reference" / filename
+            if ref_path.exists():
+                return FileResponse(ref_path)
+        raise HTTPException(status_code=404, detail="snapshot not found")
+        
     return FileResponse(path)
 
 

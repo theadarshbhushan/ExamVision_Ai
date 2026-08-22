@@ -146,6 +146,8 @@ class Event(BaseModel):
     before_snapshot_url: Optional[str] = None
     after_snapshot_url: Optional[str] = None
     annotated_snapshot_url: Optional[str] = None
+    snapshot_url: Optional[str] = None
+    annotated_snapshot_path: Optional[str] = None
     review: Optional[Literal["approve", "dismiss"]] = None
 
 

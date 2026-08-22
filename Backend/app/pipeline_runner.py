@@ -12,12 +12,15 @@ Adjust PIPELINE_CMD / PIPELINE_ENTRYPOINT below once you confirm how
 pipeline.py is actually invoked (check with the AI/ML teammate).
 """
 import json
+import os
+import shutil
 import subprocess
 import sys
 import traceback
 from pathlib import Path
 
 from app.config import (
+    ACTIVE_DETECTOR_MODEL,
     PIPELINE_PYTHON_PATH,
     PIPELINE_SCRIPT_PATH,
     RESULTS_DIR,
@@ -38,12 +41,15 @@ def _reshape_to_contract(raw: dict, job_id: str) -> dict:
     """
     pipeline.py's raw output field names may not exactly match the API
     contract. Do the renaming/mapping here in ONE place so the rest of the
-    backend never has to care. Edit the .get(...) keys on the left once you
-    see pipeline.py's real output — this is a best-guess mapping based on
-    the field names described in the project doc.
+    backend never has to care.
     """
     events_out = []
+    video_name = raw.get("video_name", "")
+    base_snapshots_path = PIPELINE_SCRIPT_PATH.parent.parent / "data" / "snapshots"
+    
     for ev in raw.get("events", []):
+        event_id = ev.get("event_id")
+        
         def _snapshot_url(snapshot_key: str) -> str | None:
             snapshot_path = ev.get(snapshot_key)
             if not snapshot_path:
@@ -58,17 +64,28 @@ def _reshape_to_contract(raw: dict, job_id: str) -> dict:
             }
             for d in ev.get("detections", [])
         ]
+        
+        has_detections = len(detections) > 0
+        snap_type = "annotated" if has_detections else "reference"
+        annotated_path = str(base_snapshots_path / video_name / snap_type / f"event_{event_id}.jpg")
+        
+        ann_url = _snapshot_url("annotated_snapshot") or f"/snapshot/{job_id}/event_{event_id}.jpg"
+        ref_url = _snapshot_url("reference_snapshot") or _snapshot_url("after_snapshot") or f"/snapshot/{job_id}/event_{event_id}_after.jpg"
+        
         events_out.append(
             {
-                "event_id": ev.get("event_id"),
+                "event_id": event_id,
                 "start_time": ev.get("start_time"),
                 "end_time": ev.get("end_time"),
                 "zone_id": ev.get("zone_id"),
                 "motion_intensity": ev.get("motion_intensity", 0.0),
                 "detections": detections,
                 "before_snapshot_url": _snapshot_url("before_snapshot"),
-                "after_snapshot_url": _snapshot_url("after_snapshot"),
-                "annotated_snapshot_url": _snapshot_url("annotated_snapshot"),
+                "after_snapshot_url": _snapshot_url("after_snapshot") or ref_url,
+                "annotated_snapshot_url": ann_url,
+                "snapshot_url": ann_url,
+                "annotated_snapshot_path": annotated_path,
+                "reference_snapshot_url": ref_url,
             }
         )
 
@@ -93,30 +110,55 @@ def run_pipeline_job(job_id: str, video_path: Path):
     try:
         _write_status(job_id, "processing", 10)
 
-        raw_output_path = RESULTS_DIR / f"{job_id}_raw.json"
+        # Define clean video name for output
+        video_name = video_path.stem
+        reports_dir = PIPELINE_SCRIPT_PATH.parent.parent / "data" / "reports"
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        raw_output_path = reports_dir / f"{video_name}.json"
+        
+        # Absolute snapshots base dir
+        snapshots_base_dir = PIPELINE_SCRIPT_PATH.parent.parent / "data" / "snapshots"
+        snapshots_base_dir.mkdir(parents=True, exist_ok=True)
+
         job_snapshot_dir = SNAPSHOTS_DIR / job_id
         job_snapshot_dir.mkdir(parents=True, exist_ok=True)
 
-        # --- subprocess mode: adjust argv to match pipeline.py's real CLI ---
+        # --- subprocess mode: adjust argv to match pipeline.py CLI ---
         cmd = [
             str(PIPELINE_PYTHON_PATH),
             str(PIPELINE_SCRIPT_PATH),
             "--input", str(video_path),
             "--output", str(raw_output_path),
-            "--snapshot-dir", str(job_snapshot_dir),
+            "--snapshot-dir", str(snapshots_base_dir),
         ]
         _write_status(job_id, "processing", 30)
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+        
+        env = os.environ.copy()
+        env["ACTIVE_DETECTOR_MODEL"] = str(ACTIVE_DETECTOR_MODEL)
+        
+        result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=1800)
 
         if result.returncode != 0:
             _write_status(job_id, "failed", 100, error=result.stderr[-2000:])
             return
 
+        # Copy generated nested snapshots to legacy folder for full backward-compatibility
+        ref_src_dir = snapshots_base_dir / video_name / "reference"
+        ann_src_dir = snapshots_base_dir / video_name / "annotated"
+        
+        if ann_src_dir.exists():
+            for f in ann_src_dir.glob("*.jpg"):
+                shutil.copy2(f, job_snapshot_dir / f.name)
+        if ref_src_dir.exists():
+            for f in ref_src_dir.glob("*.jpg"):
+                ref_filename = f.name.replace(".jpg", "_ref.jpg")
+                shutil.copy2(f, job_snapshot_dir / ref_filename)
+
         _write_status(job_id, "processing", 80)
         raw = json.loads(raw_output_path.read_text())
         contract = _reshape_to_contract(raw, job_id)
         for ev in raw.get("events", []):
-            for snapshot_key in ("before_snapshot", "after_snapshot", "annotated_snapshot"):
+            for snapshot_key in ("before_snapshot", "after_snapshot", "annotated_snapshot", "reference_snapshot"):
                 snapshot_path = ev.get(snapshot_key)
                 if snapshot_path and Path(snapshot_path).exists():
                     dest_path = job_snapshot_dir / Path(snapshot_path).name
