@@ -18,6 +18,7 @@ import traceback
 from pathlib import Path
 
 from app.config import (
+    ACTIVE_DETECTOR_MODEL,
     PIPELINE_PYTHON_PATH,
     PIPELINE_SCRIPT_PATH,
     RESULTS_DIR,
@@ -43,7 +44,10 @@ def _reshape_to_contract(raw: dict, job_id: str) -> dict:
     the field names described in the project doc.
     """
     events_out = []
+    video_name = raw.get("video_name", "")
+    base_snapshots_path = PIPELINE_SCRIPT_PATH.parent.parent / "data" / "snapshots"
     for ev in raw.get("events", []):
+        event_id = ev.get("event_id")
         detections = [
             {
                 "class_name": d.get("class_name") or d.get("label"),
@@ -52,22 +56,28 @@ def _reshape_to_contract(raw: dict, job_id: str) -> dict:
             }
             for d in ev.get("detections", [])
         ]
+        
+        has_detections = len(detections) > 0
+        snap_type = "annotated" if has_detections else "reference"
+        snap_url = f"/api/snapshots/{video_name}/{snap_type}/event_{event_id}.jpg"
+        
+        # Absolute path to the snapshot image
+        annotated_path = str(base_snapshots_path / video_name / snap_type / f"event_{event_id}.jpg")
+        
         events_out.append(
             {
-                "event_id": ev.get("event_id"),
+                "event_id": event_id,
                 "start_time": ev.get("start_time"),
                 "end_time": ev.get("end_time"),
                 "zone_id": ev.get("zone_id"),
                 "motion_intensity": ev.get("motion_intensity", 0.0),
                 "detections": detections,
-                "before_snapshot_url": f"/snapshot/{job_id}/{Path(ev.get('before_snapshot', '')).name}"
-                if ev.get("before_snapshot") else None,
-                "after_snapshot_url": f"/snapshot/{job_id}/{Path(ev.get('after_snapshot', '')).name}"
-                if ev.get("after_snapshot") else None,
-                "annotated_snapshot_url": f"/snapshot/{job_id}/{Path(ev.get('annotated_snapshot', '')).name}"
-                if ev.get("annotated_snapshot") else None,
-                "reference_snapshot_url": f"/snapshot/{job_id}/{Path(ev.get('reference_snapshot', '')).name}"
-                if ev.get("reference_snapshot") else None,
+                "before_snapshot_url": None,
+                "after_snapshot_url": None,
+                "annotated_snapshot_url": snap_url,
+                "snapshot_url": snap_url,
+                "annotated_snapshot_path": annotated_path,
+                "reference_snapshot_url": f"/api/snapshots/{video_name}/reference/event_{event_id}.jpg",
             }
         )
 
@@ -91,7 +101,16 @@ def run_pipeline_job(job_id: str, video_path: Path):
     try:
         _write_status(job_id, "processing", 10)
 
-        raw_output_path = RESULTS_DIR / f"{job_id}_raw.json"
+        # Define clean video name for output
+        video_name = video_path.stem
+        reports_dir = PIPELINE_SCRIPT_PATH.parent.parent / "data" / "reports"
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        raw_output_path = reports_dir / f"{video_name}.json"
+        
+        # Absolute snapshots base dir
+        snapshots_base_dir = PIPELINE_SCRIPT_PATH.parent.parent / "data" / "snapshots"
+        snapshots_base_dir.mkdir(parents=True, exist_ok=True)
+
         job_snapshot_dir = SNAPSHOTS_DIR / job_id
         job_snapshot_dir.mkdir(parents=True, exist_ok=True)
 
@@ -101,14 +120,32 @@ def run_pipeline_job(job_id: str, video_path: Path):
             str(PIPELINE_SCRIPT_PATH),
             "--input", str(video_path),
             "--output", str(raw_output_path),
-            "--snapshot-dir", str(job_snapshot_dir),
+            "--snapshot-dir", str(snapshots_base_dir),
         ]
         _write_status(job_id, "processing", 30)
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+        
+        import os
+        import shutil
+        env = os.environ.copy()
+        env["ACTIVE_DETECTOR_MODEL"] = str(ACTIVE_DETECTOR_MODEL)
+        
+        result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=1800)
 
         if result.returncode != 0:
             _write_status(job_id, "failed", 100, error=result.stderr[-2000:])
             return
+
+        # Copy generated nested snapshots to legacy folder for full backward-compatibility
+        ref_src_dir = snapshots_base_dir / video_name / "reference"
+        ann_src_dir = snapshots_base_dir / video_name / "annotated"
+        
+        if ann_src_dir.exists():
+            for f in ann_src_dir.glob("*.jpg"):
+                shutil.copy2(f, job_snapshot_dir / f.name)
+        if ref_src_dir.exists():
+            for f in ref_src_dir.glob("*.jpg"):
+                ref_filename = f.name.replace(".jpg", "_ref.jpg")
+                shutil.copy2(f, job_snapshot_dir / ref_filename)
 
         _write_status(job_id, "processing", 80)
         raw = json.loads(raw_output_path.read_text())

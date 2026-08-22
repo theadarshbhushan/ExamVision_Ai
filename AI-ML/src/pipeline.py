@@ -53,6 +53,13 @@ class ExamVisionPipeline:
         if not os.path.exists(video_path):
             raise FileNotFoundError(f"Video file not found at: {video_path}")
 
+        # Parse clean video name and initialize target directory layout
+        video_name = os.path.splitext(os.path.basename(video_path))[0]
+        ref_dir = os.path.abspath(os.path.join(self.data_dir, "snapshots", video_name, "reference"))
+        ann_dir = os.path.abspath(os.path.join(self.data_dir, "snapshots", video_name, "annotated"))
+        os.makedirs(ref_dir, exist_ok=True)
+        os.makedirs(ann_dir, exist_ok=True)
+
         # 1. Retrieve total frames and video properties
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
@@ -112,9 +119,6 @@ class ExamVisionPipeline:
                     detections, _ = detections_cache[after_frame_idx]
                 
                 # Save raw reference frame inside a video-specific subfolder
-                video_name = os.path.splitext(os.path.basename(video_path))[0]
-                ref_dir = os.path.join(self.data_dir, "snapshots", video_name, "reference")
-                os.makedirs(ref_dir, exist_ok=True)
                 ref_filename = f"event_{event_id}.jpg"
                 ref_path = os.path.join(ref_dir, ref_filename)
                 cv2.imwrite(ref_path, after_frame)
@@ -124,11 +128,8 @@ class ExamVisionPipeline:
                     annotated_frame = self._draw_annotations(after_frame, detections)
                     
                     # Save annotated full-frame image inside a video-specific subfolder
-                    output_dir = os.path.join(self.data_dir, "snapshots", video_name, "annotated")
-                    os.makedirs(output_dir, exist_ok=True)
-                    
                     annotated_filename = f"event_{event_id}.jpg"
-                    annotated_path = os.path.join(output_dir, annotated_filename)
+                    annotated_path = os.path.join(ann_dir, annotated_filename)
                     cv2.imwrite(annotated_path, annotated_frame)
                     
             results.append({
