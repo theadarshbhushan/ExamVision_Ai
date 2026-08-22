@@ -1,174 +1,53 @@
 "use client"
 
-import { useState } from "react"
-import { TrendingUp, TrendingDown, Upload, ChevronRight, Download, Activity } from "lucide-react"
+import React, { useState } from "react"
+import {
+  TrendingUp,
+  TrendingDown,
+  Upload,
+  ChevronDown,
+  Users,
+  Flag,
+  Shield,
+  Activity,
+  Download,
+  ChevronRight,
+  Sparkles,
+} from "lucide-react"
 import {
   FLAG_TREND,
+  EMPTY_FLAG_TREND,
   type ProctoringEvent,
 } from "@/lib/examvision-data"
-import { StatusPill, SeverityPill } from "./primitives"
+import { StatusPill, SeverityPill, ClayCard } from "./primitives"
 import { cn } from "@/lib/utils"
-import { FlaggedGallery } from "./flagged-gallery"
-
-function KpiCard({ kpi }: { kpi: { label: string; value: string; delta: string; trend: "up" | "down" } }) {
-  const isUp = kpi.trend === "up"
-  return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-sm animate-fade-in">
-      <p className="text-sm text-muted-foreground">{kpi.label}</p>
-      <div className="mt-2 flex items-end justify-between">
-        <p className="text-3xl font-semibold tracking-tight text-foreground">
-          {kpi.value}
-        </p>
-        {kpi.delta && (
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-              isUp
-                ? "bg-success/12 text-success"
-                : "bg-secondary text-muted-foreground",
-            )}
-          >
-            {isUp ? (
-              <TrendingUp className="size-3" />
-            ) : (
-              <TrendingDown className="size-3" />
-            )}
-            {kpi.delta}
-          </span>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function FlagChart() {
-  const max = Math.max(...FLAG_TREND.map((d) => d.flags))
-  return (
-    <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-base font-semibold text-foreground">
-            Flag volume
-          </h3>
-          <p className="text-sm text-muted-foreground">Last 7 days</p>
-        </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground">
-          <span className="size-1.5 rounded-full bg-primary" />
-          Flags
-        </span>
-      </div>
-      <div className="mt-8 flex h-48 items-end justify-between gap-3">
-        {FLAG_TREND.map((d) => (
-          <div
-            key={d.day}
-            className="flex h-full flex-1 flex-col items-center justify-end gap-2"
-          >
-            <span className="text-xs font-medium tabular-nums text-muted-foreground">
-              {d.flags}
-            </span>
-            <div
-              className="w-full rounded-t-md bg-primary/85 transition-all hover:bg-primary"
-              style={{ height: `${Math.max(6, (d.flags / max) * 100)}%` }}
-              title={`${d.flags} flags`}
-            />
-            <span className="text-xs text-muted-foreground">{d.day}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function HeatmapCard({ heatmapZones }: { heatmapZones: { zone_id: number; total_intensity: number; event_count: number }[] | null }) {
-  const zoneIds = [1, 2, 3, 4, 5, 6, 7, 8]
-  const maxCount = heatmapZones && heatmapZones.length > 0 
-    ? Math.max(...heatmapZones.map(z => z.event_count), 1) 
-    : 1
-
-  return (
-    <div className="rounded-xl border border-border bg-card p-6 shadow-sm flex flex-col justify-between">
-      <div>
-        <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
-          <Activity className="size-5 text-primary" />
-          Spatial Activity Heatmap
-        </h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          Aggregated events and motion intensity per proctoring zone.
-        </p>
-      </div>
-
-      <div className="mt-6">
-        {!heatmapZones || heatmapZones.length === 0 ? (
-          <div className="flex h-44 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-secondary/10 text-center p-4">
-            <p className="text-sm font-medium text-muted-foreground">No heatmap telemetry available</p>
-            <p className="text-xs text-muted-foreground mt-1">Upload a session video to generate spatial activity tracking.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-4 gap-2.5">
-            {zoneIds.map((id) => {
-              const zData = heatmapZones.find(z => z.zone_id === id)
-              const count = zData ? zData.event_count : 0
-              const intensity = zData ? zData.total_intensity : 0
-              const isHigh = count > 0 && (count / maxCount) > 0.5
-
-              return (
-                <div
-                  key={id}
-                  className="flex flex-col justify-between rounded-lg border border-border/80 p-3 transition duration-150 hover:scale-[1.02] hover:shadow-sm"
-                  style={{
-                    backgroundColor: count > 0 
-                      ? `rgba(59, 130, 246, ${0.12 + 0.60 * (count / maxCount)})` 
-                      : 'rgba(248, 250, 252, 0.7)',
-                    color: isHigh ? '#ffffff' : 'inherit'
-                  }}
-                >
-                  <div>
-                    <p className={cn(
-                      "text-[10px] font-bold uppercase tracking-wider",
-                      isHigh ? "text-blue-100" : "text-muted-foreground"
-                    )}>
-                      Zone {id}
-                    </p>
-                    <p className="text-xl font-extrabold tracking-tight mt-0.5 tabular-nums">
-                      {count} <span className="text-[10px] font-medium opacity-80">evt</span>
-                    </p>
-                  </div>
-                  {count > 0 && (
-                    <p className={cn(
-                      "text-[9px] mt-1.5 leading-none font-medium opacity-90",
-                      isHigh ? "text-blue-200" : "text-muted-foreground"
-                    )}>
-                      Mot: {intensity.toFixed(1)}
-                    </p>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
 export function Dashboard({
   events,
   pipelineStats,
   heatmapZones,
+  totalDuration,
+  isDemo = true,
   onOpenEvent,
   onUpload,
 }: {
   events: ProctoringEvent[]
   pipelineStats: { totalFrames: number; framesSentToYolo: number; bypassRatio: number } | null
   heatmapZones: { zone_id: number; total_intensity: number; event_count: number }[] | null
+  totalDuration?: number
+  isDemo?: boolean
   onOpenEvent: (id: string) => void
   onUpload: () => void
 }) {
+  const [timeRange, setTimeRange] = useState("Last 7 days")
+  const [selectedZone, setSelectedZone] = useState<number | null>(null)
   const [query, setQuery] = useState("")
 
   const uniqueSessions = new Set(events.map((e) => e.session)).size
   const activeCount = events.filter((e) => e.status === "Pending").length
-  const flagsCount = events.filter((e) => e.detection !== "Motion Triggered").length
+  const flagsCount = events.filter(
+    (e) => e.status === "Flagged" || (e.detection !== "Motion Triggered" && e.detection !== "Normal Activity")
+  ).length
 
   // Calculate dynamic Integrity Indicator
   const sessionsList = Array.from(new Set(events.map((e) => e.session)))
@@ -178,36 +57,54 @@ export function Dashboard({
     const penalty = sessionEvents.reduce((sum, e) => {
       if (e.status === "Cleared") return sum
       const base = e.severity === "Critical" ? 20 : e.severity === "Medium" ? 10 : 5
-      const mult = e.status === "Flagged" ? 1.0 : e.confidence / 100
+      const mult = e.status === "Flagged" ? 1.0 : (e.confidence || 75) / 100
       return sum + base * mult
     }, 0)
     totalScore += Math.max(0, 100 - penalty)
   })
-  const avgIntegrity = sessionsList.length > 0 ? Math.round(totalScore / sessionsList.length) : 100
+  const avgIntegrity = sessionsList.length > 0 ? `${Math.round(totalScore / sessionsList.length)}%` : "—"
 
-  const dynamicKpis = [
-    { label: "Sessions analyzed", value: uniqueSessions.toString(), delta: "", trend: "up" as const },
-    { label: "Active investigations", value: activeCount.toString(), delta: "", trend: "up" as const },
-    { label: "Flags detected", value: flagsCount.toString(), delta: "", trend: "up" as const },
-    { label: "Integrity indicator", value: `${avgIntegrity}%`, delta: "weighted index", trend: "up" as const },
-  ]
+  // Display values (respecting demo vs real user account)
+  const displaySessions = isDemo ? "1,284" : uniqueSessions.toString()
+  const displayActive = isDemo ? "37" : activeCount.toString()
+  const displayFlags = isDemo ? "92" : flagsCount.toString()
+  const displayIntegrity = isDemo ? "94.2%" : avgIntegrity
 
-  const filtered = events.filter((e) => {
+  const trendData = isDemo
+    ? FLAG_TREND
+    : events.length > 0
+    ? FLAG_TREND
+    : EMPTY_FLAG_TREND
+
+  const maxTrend = Math.max(...trendData.map((d) => d.flags), 1)
+
+  const filteredEvents = events.filter((e) => {
     const q = query.toLowerCase()
-    return (
+    const matchesQuery =
       String(e.zone).toLowerCase().includes(q) ||
       e.exam.toLowerCase().includes(q) ||
       e.detection.toLowerCase().includes(q) ||
       e.id.toLowerCase().includes(q)
-    )
+
+    const matchesZone =
+      selectedZone === null ||
+      String(e.zone) === `Zone ${selectedZone}` ||
+      String(e.zone) === String(selectedZone)
+
+    return matchesQuery && matchesZone
   })
+
+  function getZoneData(id: number) {
+    if (!heatmapZones || heatmapZones.length === 0) return null
+    return heatmapZones.find((z) => z.zone_id === id) || null
+  }
 
   function handleExportCSV() {
     if (events.length === 0) return
     const headers = ["Event ID", "Zone", "Detection", "Confidence", "Severity", "Status", "Timestamp"]
     const rows = events.map((e) => [
       e.id,
-      `Zone ${e.zone}`,
+      String(e.zone),
       e.detection,
       `${e.confidence}%`,
       e.severity,
@@ -229,166 +126,340 @@ export function Dashboard({
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Dashboard
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Overview of session analysis and open investigations.
-          </p>
-        </div>
-        <button
-          onClick={onUpload}
-          className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-        >
-          <Upload className="size-4" />
-          Upload video
-        </button>
-      </div>
-
-      {/* KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {dynamicKpis.map((kpi) => (
-          <KpiCard key={kpi.label} kpi={kpi} />
-        ))}
-      </div>
-
-      {/* Chart */}
-      <FlagChart />
-
-      {/* Telemetry and Spatial Cards */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Pipeline Efficiency card */}
-        {pipelineStats ? (
-          <div className="rounded-xl border border-border bg-blue-50/40 dark:bg-blue-950/20 p-6 shadow-sm flex flex-col justify-between gap-6 transition duration-200">
-            <div className="flex items-start gap-4">
-              <span className="flex size-12 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 shrink-0">
-                <TrendingDown className="size-6" />
-              </span>
-              <div>
-                <h3 className="text-base font-semibold text-foreground">Pipeline Efficiency (Bypass Rate)</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Our background subtraction model maps motion regions, bypassing idle camera frames from deep YOLO classification to maximize performance.
-                </p>
-              </div>
-            </div>
-            <div className="border-t border-border/80 pt-4 mt-auto">
-              <p className="text-sm text-muted-foreground">
-                Analyzed <span className="font-semibold text-foreground">{pipelineStats.totalFrames.toLocaleString()}</span> frames &mdash; only <span className="font-semibold text-foreground">{pipelineStats.framesSentToYolo.toLocaleString()}</span> sent to AI model.
-              </p>
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Total compute saved</span>
-                <span className="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-950/30 px-3 py-1 text-sm font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-600/20">
-                  {pipelineStats.bypassRatio}% Saved
-                </span>
-              </div>
-            </div>
+    <div className="space-y-8 animate-fade-in">
+      {/* 4 Stat Cards matching dashboard.png */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Card 1: Sessions analyzed */}
+        <div className="clay-card relative overflow-hidden p-6">
+          <div className="flex items-start justify-between">
+            <span className="text-[15px] font-medium text-[var(--text-secondary)]">
+              Sessions analyzed
+            </span>
+            <span className="flex size-10 items-center justify-center rounded-full bg-[#ebf4ff] text-[#2563eb] shadow-[0_4px_10px_rgba(37,99,235,0.2),inset_0_1.5px_2px_rgba(255,255,255,0.9)]">
+              <TrendingUp className="size-5" strokeWidth={2.5} />
+            </span>
           </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-border bg-card p-6 shadow-sm flex flex-col items-center justify-center text-center p-8 min-h-64">
-            <TrendingDown className="size-8 text-muted-foreground/60 mb-2" />
-            <p className="text-sm font-medium text-muted-foreground">No efficiency metrics loaded</p>
-            <p className="text-xs text-muted-foreground mt-1">Run video upload to measure AI computation savings.</p>
-          </div>
-        )}
-
-        {/* Spatial Activity Heatmap Card */}
-        <HeatmapCard heatmapZones={heatmapZones} />
-      </div>
-
-      {/* Flagged Visual Detections Gallery */}
-      <FlaggedGallery events={events} onOpenEvent={onOpenEvent} />
-
-      {/* Recent events */}
-      <div className="rounded-xl border border-border bg-card shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-4">
-          <div>
-            <h3 className="text-base font-semibold text-foreground">
-              Recent events
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Click a row to review the evidence.
+          <div className="mt-3">
+            <p className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)] flex items-center gap-1.5">
+              {displaySessions} {displaySessions !== "0" && <span className="text-xl font-bold text-[#10b981]">↗</span>}
+            </p>
+            <p className="mt-1.5 text-xs font-semibold text-[#10b981]">
+              {isDemo ? "+12% from last week" : events.length > 0 ? "Active workspace" : "Ready for video"}
             </p>
           </div>
+        </div>
+
+        {/* Card 2: Active investigations */}
+        <div className="clay-card relative overflow-hidden p-6">
+          <div className="flex items-start justify-between">
+            <span className="text-[15px] font-medium text-[var(--text-secondary)]">
+              Active investigations
+            </span>
+            <span className="flex size-10 items-center justify-center rounded-full bg-[#ebf4ff] text-[#2563eb] shadow-[0_4px_10px_rgba(37,99,235,0.2),inset_0_1.5px_2px_rgba(255,255,255,0.9)]">
+              <Users className="size-5" strokeWidth={2.5} />
+            </span>
+          </div>
+          <div className="mt-3">
+            <p className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)] flex items-center gap-1.5">
+              {displayActive} {displayActive !== "0" && <span className="text-xl font-bold text-[#10b981]">↗</span>}
+            </p>
+            <p className="mt-1.5 text-xs font-semibold text-[#10b981]">
+              {isDemo ? "+8% from last week" : `${activeCount} pending review`}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: Flags detected */}
+        <div className="clay-card relative overflow-hidden p-6">
+          <div className="flex items-start justify-between">
+            <span className="text-[15px] font-medium text-[var(--text-secondary)]">
+              Flags detected
+            </span>
+            <span className="flex size-10 items-center justify-center rounded-full bg-[#fff0f0] text-[#ef4444] shadow-[0_4px_10px_rgba(239,68,68,0.2),inset_0_1.5px_2px_rgba(255,255,255,0.9)]">
+              <Flag className="size-5" strokeWidth={2.5} />
+            </span>
+          </div>
+          <div className="mt-3">
+            <p className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)] flex items-center gap-1.5">
+              {displayFlags} <Flag className="size-5 fill-current text-[#ef4444] inline-block" />
+            </p>
+            <p className="mt-1.5 text-xs font-semibold text-[#10b981]">
+              {isDemo ? "+15% from last week" : `${flagsCount} potential violations`}
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: Integrity indicator */}
+        <div className="clay-card relative overflow-hidden p-6">
+          <div className="flex items-start justify-between">
+            <span className="text-[15px] font-medium text-[var(--text-secondary)]">
+              Integrity indicator
+            </span>
+            <span className="flex size-10 items-center justify-center rounded-full bg-[#ebf4ff] text-[#2563eb] shadow-[0_4px_10px_rgba(37,99,235,0.2),inset_0_1.5px_2px_rgba(255,255,255,0.9)]">
+              <Shield className="size-5" strokeWidth={2.5} />
+            </span>
+          </div>
+          <div className="mt-3">
+            <p className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
+              {displayIntegrity}
+            </p>
+            <p className="mt-1.5 text-xs font-semibold text-[#10b981]">
+              {isDemo ? "+2.4% from last week" : events.length > 0 ? "Weighted index" : "No active session"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Two Large Clay Cards matching dashboard.png */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        {/* Left: Flag Volume 3D Bar Chart Card */}
+        <div className="clay-card flex flex-col justify-between p-7">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
+              Flag volume
+            </h2>
+
+            {/* Dropdown pill */}
+            <button className="clay-btn-secondary flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold">
+              {timeRange}
+              <ChevronDown className="size-3.5" />
+            </button>
+          </div>
+
+          {/* 3D Clay Pill Bar Chart */}
+          <div className="mt-8 flex h-60 items-end justify-between gap-4 px-2 sm:px-6">
+            {trendData.map((item) => {
+              const heightPercent = item.flags === 0 ? 6 : Math.max(8, Math.round((item.flags / maxTrend) * 100))
+              return (
+                <div
+                  key={item.day}
+                  className="group flex h-full flex-1 flex-col items-center justify-end gap-2.5 cursor-pointer"
+                >
+                  {/* Number label above bar */}
+                  <span className="text-xs font-bold text-[var(--text-secondary)] transition-transform group-hover:scale-110 group-hover:text-[#2563eb]">
+                    {item.flags}
+                  </span>
+
+                  {/* 3D rounded clay pill bar */}
+                  <div className="relative w-full max-w-[28px] h-full flex items-end">
+                    <div
+                      className="clay-bar w-full transition-all duration-500"
+                      style={{ height: `${heightPercent}%` }}
+                    />
+                  </div>
+
+                  {/* Day label */}
+                  <span className="text-xs font-medium text-[var(--text-secondary)]">
+                    {item.day}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Right: Spatial Activity Heatmap Card */}
+        <div className="clay-card relative overflow-hidden p-7 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
+                Spatial Activity Heatmap
+              </h2>
+              {selectedZone !== null && (
+                <button
+                  onClick={() => setSelectedZone(null)}
+                  className="clay-btn-secondary px-2.5 py-1 text-[11px] font-bold text-[#2563eb]"
+                >
+                  Reset Filter (Zone {selectedZone})
+                </button>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              {heatmapZones && heatmapZones.length > 0
+                ? "Live multi-zone camera proctoring density & telemetry"
+                : "Live multi-zone camera proctoring density & motion clustering"}
+            </p>
+          </div>
+
+          {/* Fluid organic interconnected metaball graphic (as in dashboard.png) */}
+          <div className="relative my-4 flex h-60 items-center justify-center">
+            {/* SVG Metaball bridge connections */}
+            <svg
+              className="absolute inset-0 size-full pointer-events-none"
+              viewBox="0 0 400 240"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <defs>
+                <linearGradient id="bridgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#a7f3d0" stopOpacity="0.8" />
+                  <stop offset="50%" stopColor="#6ee7b7" stopOpacity="0.6" />
+                  <stop offset="100%" stopColor="#93c5fd" stopOpacity="0.8" />
+                </linearGradient>
+                <filter id="goo">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+                  <feColorMatrix
+                    in="blur"
+                    mode="matrix"
+                    values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"
+                    result="goo"
+                  />
+                </filter>
+              </defs>
+
+              {/* Organic connected fluid bridges */}
+              <g filter="url(#goo)">
+                <path
+                  d="M 100 80 Q 200 40 300 80 Q 320 160 300 180 Q 200 190 100 180 Q 80 120 100 80 Z"
+                  fill="url(#bridgeGrad)"
+                  opacity="0.65"
+                />
+                <circle cx="200" cy="130" r="40" fill="#6ee7b7" opacity="0.5" />
+              </g>
+            </svg>
+
+            {/* Zone Discs Grid with glowing clay style */}
+            <div className="relative z-10 grid grid-cols-2 gap-x-32 gap-y-12">
+              {[1, 2, 3, 4].map((zId) => {
+                const zData = getZoneData(zId)
+                const isSelected = selectedZone === zId
+                const count = zData ? zData.event_count : events.filter(e => String(e.zone).includes(String(zId))).length
+                const hasActivity = count > 0
+
+                return (
+                  <button
+                    key={zId}
+                    onClick={() => setSelectedZone(isSelected ? null : zId)}
+                    className={cn(
+                      "group relative flex size-24 flex-col items-center justify-center rounded-full shadow-[0_8px_24px_rgba(16,185,129,0.3),inset_0_2px_4px_rgba(255,255,255,0.9)] backdrop-blur-sm transition-all hover:scale-110 active:scale-95 cursor-pointer",
+                      zId % 2 === 1
+                        ? "bg-gradient-to-tr from-[#6ee7b7]/70 to-[#a7f3d0]/90 text-[#065f46]"
+                        : "bg-gradient-to-tr from-[#67e8f9]/70 to-[#a5f3fc]/90 text-[#0e7490]",
+                      isSelected && "ring-4 ring-[#2563eb] scale-105"
+                    )}
+                  >
+                    <span className="text-sm font-bold group-hover:scale-105">
+                      Zone {zId}
+                    </span>
+                    {count > 0 && (
+                      <span className="text-[10px] font-semibold opacity-85">
+                        {count} {count === 1 ? "evt" : "evts"}
+                      </span>
+                    )}
+                    {hasActivity && (
+                      <span className="absolute -top-1 -right-1 flex size-3">
+                        <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#10b981] opacity-75" />
+                        <span className="relative inline-flex size-3 rounded-full bg-[#10b981]" />
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-[#10b981]" /> 4 Active Proctoring Zones
+            </span>
+            <span
+              onClick={onUpload}
+              className="font-semibold text-[#2563eb] hover:underline cursor-pointer"
+            >
+              Analyze New Video →
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Events Section */}
+      <div className="clay-card p-7">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--bg-app)] pb-5">
+          <div>
+            <h3 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">
+              Recent Proctoring Events
+            </h3>
+            <p className="text-xs text-[var(--text-secondary)]">
+              {events.length > 0
+                ? "Click any flagged event to review high-resolution AI snapshots."
+                : "No proctoring events recorded yet. Upload an exam recording to begin AI analysis."}
+            </p>
+          </div>
+
           <div className="flex items-center gap-3">
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter events…"
-              className="h-9 w-full max-w-56 rounded-lg border border-border bg-card px-3 text-sm text-foreground shadow-sm outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-3 focus:ring-ring/20"
+              placeholder="Search session or exam..."
+              className="clay-search-bar h-9 px-4 text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none"
             />
             <button
               onClick={handleExportCSV}
               disabled={events.length === 0}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 py-1 text-sm font-medium text-foreground shadow-sm transition hover:bg-muted disabled:opacity-40 disabled:pointer-events-none"
+              className="clay-btn-secondary flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold disabled:opacity-40"
             >
-              <Download className="size-4 text-muted-foreground" />
-              Export CSV
+              <Download className="size-3.5" />
+              Export
             </button>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-sm">
+        {/* Table Rows */}
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                <th className="px-6 py-3">Event</th>
-                <th className="px-6 py-3">Zone</th>
-                <th className="px-6 py-3">Detection</th>
-                <th className="px-6 py-3">Confidence</th>
-                <th className="px-6 py-3">Severity</th>
-                <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3" />
+              <tr className="border-b border-[var(--bg-app)] text-xs font-semibold uppercase text-[var(--text-muted)]">
+                <th className="pb-3 pt-1">Event</th>
+                <th className="pb-3 pt-1">Zone / Exam</th>
+                <th className="pb-3 pt-1">Detection Type</th>
+                <th className="pb-3 pt-1">Confidence</th>
+                <th className="pb-3 pt-1">Severity</th>
+                <th className="pb-3 pt-1">Status</th>
+                <th className="pb-3 pt-1 text-right">Action</th>
               </tr>
             </thead>
-            <tbody>
-              {filtered.map((e) => (
+            <tbody className="divide-y divide-[var(--bg-app)]">
+              {filteredEvents.map((evt) => (
                 <tr
-                  key={e.id}
-                  onClick={() => onOpenEvent(e.id)}
-                  className="group cursor-pointer border-b border-border last:border-0 transition-colors hover:bg-muted/60"
+                  key={evt.id}
+                  onClick={() => onOpenEvent(evt.id)}
+                  className="group cursor-pointer transition-colors hover:bg-[var(--bg-card-secondary)]"
                 >
-                  <td className="px-6 py-3.5 font-mono text-xs text-muted-foreground">
-                    {e.id}
+                  <td className="py-4 font-mono text-xs font-bold text-[#2563eb]">
+                    {evt.id}
                   </td>
-                  <td className="px-6 py-3.5">
-                    <p className="font-medium text-foreground">Zone {e.zone}</p>
-                    <p className="text-xs text-muted-foreground">{e.exam}</p>
+                  <td className="py-4">
+                    <p className="font-semibold text-[var(--text-primary)]">{evt.zone}</p>
+                    <p className="text-xs text-[var(--text-secondary)]">{evt.exam}</p>
                   </td>
-                  <td className="px-6 py-3.5 text-foreground">{e.detection}</td>
-                  <td className="px-6 py-3.5">
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-secondary">
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{ width: `${e.confidence}%` }}
-                        />
-                      </div>
-                      <span className="text-xs tabular-nums text-muted-foreground">
-                        {e.confidence}%
-                      </span>
-                    </div>
+                  <td className="py-4 text-xs font-medium text-[var(--text-primary)]">
+                    {evt.detection}
                   </td>
-                  <td className="px-6 py-3.5">
-                    <SeverityPill severity={e.severity} />
+                  <td className="py-4">
+                    <span className="text-xs font-bold text-[var(--text-primary)]">
+                      {evt.confidence}%
+                    </span>
                   </td>
-                  <td className="px-6 py-3.5">
-                    <StatusPill status={e.status} />
+                  <td className="py-4">
+                    <SeverityPill severity={evt.severity} />
                   </td>
-                  <td className="px-6 py-3.5 text-right">
-                    <ChevronRight className="ml-auto size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  <td className="py-4">
+                    <StatusPill status={evt.status} />
+                  </td>
+                  <td className="py-4 text-right">
+                    <button className="clay-btn-secondary inline-flex items-center gap-1 px-3 py-1 text-xs font-medium group-hover:bg-white">
+                      Review
+                      <ChevronRight className="size-3" />
+                    </button>
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
+              {filteredEvents.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="px-6 py-10 text-center text-sm text-muted-foreground"
-                  >
-                    No events match “{query}”.
+                  <td colSpan={7} className="py-12 text-center text-sm text-[var(--text-secondary)]">
+                    {query
+                      ? `No events match "${query}".`
+                      : "No proctoring events found. Upload an exam recording to begin AI analysis."}
                   </td>
                 </tr>
               )}

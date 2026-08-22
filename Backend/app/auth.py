@@ -5,6 +5,12 @@ import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import ExpiredSignatureError, InvalidTokenError
+import bcrypt
+if not hasattr(bcrypt, "__about__"):
+    class _About:
+        __version__ = getattr(bcrypt, "__version__", "4.0.0")
+    bcrypt.__about__ = _About()
+
 from passlib.context import CryptContext
 from pymongo.collection import Collection
 
@@ -104,6 +110,26 @@ async def get_current_user(
     return serialize_user(user_document)
 
 
+async def get_optional_current_user(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+) -> Optional[dict[str, Any]]:
+    token = credentials.credentials if credentials is not None else request.cookies.get("access_token")
+    if not token:
+        return None
+    try:
+        payload = decode_access_token(token)
+        user_id = payload.get("sub")
+        if not user_id:
+            return None
+        user_document = get_users_collection().find_one({"_id": user_id})
+        if not user_document or not user_document.get("is_active", True):
+            return None
+        return serialize_user(user_document)
+    except Exception:
+        return None
+
+
 def require_role(*allowed_roles: str):
     async def role_dependency(current_user: dict[str, Any] = Depends(get_current_user)):
         user_role = current_user.get("role")
@@ -115,3 +141,4 @@ def require_role(*allowed_roles: str):
         return current_user
 
     return role_dependency
+

@@ -1,50 +1,253 @@
 "use client"
-import { useEffect, useRef, useState } from "react"
-import { Bell, ChevronLeft, FileText, FolderSearch, LayoutDashboard, LogOut, Moon, Radio, Repeat2, Search, Sun, Upload, Users } from "lucide-react"
-import type { Screen } from "@/lib/examvision-data"
+
+import React, { useEffect, useRef, useState } from "react"
+import {
+  LayoutDashboard,
+  Upload,
+  Search,
+  Bell,
+  FileText,
+  Settings as SettingsIcon,
+  Sun,
+  Moon,
+  LogOut,
+  ChevronDown,
+  User as UserIcon,
+  Sparkles,
+} from "lucide-react"
+import { type Screen } from "@/lib/examvision-data"
 import { Logo } from "./primitives"
-import { CommandPalette, NotificationDrawer } from "./overlays"
 import { cn } from "@/lib/utils"
+import type { User } from "@/lib/api-client"
 
-type NavKey = "dashboard" | "upload" | "investigations" | "live" | "students" | "alerts" | "reports"
-const NAV = [
-  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, screen: "dashboard" }, { key: "upload", label: "Upload", icon: Upload, screen: "upload" },
-  { key: "investigations", label: "Investigations", icon: FolderSearch, screen: "event-detail" }, { key: "alerts", label: "Alerts", icon: Bell, screen: "alerts" }, { key: "reports", label: "Reports", icon: FileText, screen: "reports" },
-] as const
+type NavKey = "dashboard" | "upload" | "investigations" | "alerts" | "reports" | "settings"
 
-const ACCOUNTS = [
-  { name: "Lena Sørensen", email: "lena@university.edu", initials: "LS" },
-  { name: "Ravi Patel", email: "ravi@university.edu", initials: "RP" },
-  { name: "Maya Chen", email: "maya@university.edu", initials: "MC" },
-]
-
-function UserMenu({ onSignOut }: { onSignOut: () => void }) {
-  const [open, setOpen] = useState(false), [switching, setSwitching] = useState(false), [account, setAccount] = useState(ACCOUNTS[0]), [confirm, setConfirm] = useState(false), [active, setActive] = useState(0)
-  const menuRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const outside = (event: MouseEvent) => { if (!menuRef.current?.contains(event.target as Node)) setOpen(false) }
-    const key = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false)
-      if (event.key === "ArrowDown") { event.preventDefault(); setActive(i => Math.min(i + 1, switching ? ACCOUNTS.length - 1 : 1)) }
-      if (event.key === "ArrowUp") { event.preventDefault(); setActive(i => Math.max(i - 1, 0)) }
-      if (event.key === "Enter") { event.preventDefault(); if (switching) { setAccount(ACCOUNTS[active]); setSwitching(false); setOpen(false) } else if (active === 0) setSwitching(true); else { setConfirm(true); setTimeout(onSignOut, 700) } }
-    }
-    document.addEventListener("mousedown", outside); document.addEventListener("keydown", key)
-    return () => { document.removeEventListener("mousedown", outside); document.removeEventListener("keydown", key) }
-  }, [open, switching, active, onSignOut])
-  return <div ref={menuRef} className="relative"><button onClick={() => { setOpen(v => !v); setSwitching(false); setActive(0) }} aria-label="Open user menu" aria-expanded={open} className="flex size-9 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary transition hover:scale-105 focus:ring-3 focus:ring-ring/20">{account.initials}</button>{open && <div className="absolute right-0 top-12 w-72 overflow-hidden rounded-xl border border-border bg-popover p-1 shadow-sm" role="menu" aria-label="User account menu">{confirm ? <div className="px-4 py-5 text-center text-sm font-medium text-destructive">Logging you out…</div> : switching ? <><button onClick={() => setSwitching(false)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-muted"><ChevronLeft className="size-4"/>Accounts</button><div className="my-1 border-t border-border"/>{ACCOUNTS.map((item, index) => <button key={item.email} role="menuitem" onClick={() => { setAccount(item); setSwitching(false); setOpen(false) }} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-muted ${active === index ? "bg-muted" : ""}`}><span className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary">{item.initials}</span><span><span className="block text-sm font-medium text-foreground">{item.name}</span><span className="block text-xs text-muted-foreground">{item.email}</span></span></button>)}</> : <><div className="flex items-center gap-3 px-3 py-3"><span className="flex size-9 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary">{account.initials}</span><span><span className="block text-sm font-semibold text-foreground">{account.name}</span><span className="block text-xs text-muted-foreground">{account.email}</span></span></div><div className="my-1 border-t border-border"/><button role="menuitem" onClick={() => setSwitching(true)} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-foreground hover:bg-muted ${active === 0 ? "bg-muted" : ""}`}><Repeat2 className="size-4 text-muted-foreground"/>Switch account</button><div className="my-1 border-t border-border"/><button role="menuitem" onClick={() => { setConfirm(true); setTimeout(onSignOut, 700) }} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 ${active === 1 ? "bg-destructive/10" : ""}`}><LogOut className="size-4"/>Log out</button></>}</div>}</div>
+type NavItem = {
+  key: NavKey
+  label: string
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
+  screen: Screen
+  badge?: number
 }
 
-export function AppShell({ active, onNavigate, onSignOut, alertCount, onOpenEvent, children }: { active: NavKey; onNavigate: (screen: Screen) => void; onSignOut: () => void; alertCount: number; onOpenEvent: (id: string) => void; children: React.ReactNode }) {
-  const [palette, setPalette] = useState(false), [notifications, setNotifications] = useState(false), [dark, setDark] = useState(false)
-  useEffect(() => { const key = (e: KeyboardEvent) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPalette(true) } }; window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key) }, [])
+const NAV_ITEMS: NavItem[] = [
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, screen: "dashboard" },
+  { key: "upload", label: "Upload", icon: Upload, screen: "upload" },
+  { key: "investigations", label: "Investigations", icon: Search, screen: "investigations" },
+  { key: "alerts", label: "Alerts", icon: Bell, screen: "alerts", badge: 5 },
+  { key: "reports", label: "Reports", icon: FileText, screen: "reports" },
+  { key: "settings", label: "Settings", icon: SettingsIcon, screen: "settings" },
+]
+
+export function AppShell({
+  active,
+  currentUser,
+  onNavigate,
+  onSignOut,
+  alertCount = 5,
+  onOpenEvent,
+  children,
+}: {
+  active: NavKey
+  currentUser?: User | null
+  onNavigate: (screen: Screen) => void
+  onSignOut: () => void
+  alertCount?: number
+  onOpenEvent: (id: string) => void
+  children: React.ReactNode
+}) {
+  const [dark, setDark] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const menuRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark)
   }, [dark])
-  return <div className="min-h-screen bg-background transition-colors duration-300">
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-border bg-sidebar lg:flex"><div className="flex h-16 items-center px-5"><button onClick={() => onNavigate("landing")} aria-label="Go to homepage" className="rounded-lg transition duration-200 hover:scale-[1.02] hover:opacity-80 focus:ring-3 focus:ring-ring/20"><Logo/></button></div><nav className="flex flex-1 flex-col gap-1 px-3 py-4"><p className="px-3 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Workspace</p>{NAV.map(item => <button key={item.key} onClick={() => onNavigate(item.screen)} className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all hover:bg-muted", active === item.key ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground")}><item.icon className="size-4.5"/>{item.label}{item.key === "alerts" && <span className="ml-auto rounded-full bg-primary/15 px-1.5 text-xs text-primary">{alertCount}</span>}</button>)}</nav><div className="border-t border-border p-3"><button onClick={() => setDark(d => !d)} className="mb-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:bg-muted" aria-label="Toggle theme">{dark ? <Sun className="size-4"/> : <Moon className="size-4"/>}{dark ? "Light mode" : "Dark mode"}</button><div className="flex items-center gap-3 rounded-lg px-3 py-2"><span className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">LS</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">Lena Sørensen</p><p className="truncate text-xs text-muted-foreground">Integrity Reviewer</p></div><button onClick={onSignOut} aria-label="Sign out" className="text-muted-foreground hover:text-foreground"><LogOut className="size-4"/></button></div></div></aside>
-    <div className="lg:pl-60"><header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-border bg-background/95 px-6 backdrop-blur"><div className="lg:hidden"><Logo showWordmark={false}/></div><div className="relative max-w-md flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"/><button onClick={() => setPalette(true)} className="h-9 w-full rounded-lg bg-muted pl-9 pr-3 text-left text-sm text-muted-foreground focus:ring-3 focus:ring-ring/20">Search sessions, students, exams… <kbd className="float-right hidden rounded border border-border px-1 text-[10px] sm:inline">⌘K</kbd></button></div><div className="ml-auto flex items-center gap-2"><button onClick={() => setNotifications(true)} aria-label="Notifications" className="relative flex size-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm hover:text-foreground"><Bell className="size-4.5"/><span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-accent text-[10px] text-accent-foreground">{alertCount}</span></button><UserMenu onSignOut={onSignOut}/></div></header><main className="mx-auto max-w-6xl px-6 py-8">{children}</main></div>
-    <CommandPalette open={palette} onClose={() => setPalette(false)} onNavigate={onNavigate} onEvent={onOpenEvent}/><NotificationDrawer open={notifications} onClose={() => setNotifications(false)}/>
-  </div>
+
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleOutside)
+    return () => document.removeEventListener("mousedown", handleOutside)
+  }, [])
+
+  const initials = currentUser?.full_name
+    ? currentUser.full_name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "LR"
+
+  return (
+    <div className="flex min-h-screen bg-[var(--bg-app)] text-[var(--text-primary)] transition-colors duration-300">
+      {/* Left Sidebar matching Stitch designs */}
+      <aside
+        className={cn(
+          "sticky top-0 z-30 hidden h-screen w-64 shrink-0 flex-col justify-between p-6 lg:flex",
+          active === "investigations"
+            ? "clay-card-mint border-r border-teal-100/40"
+            : "bg-transparent"
+        )}
+      >
+        <div className="space-y-8">
+          {/* Logo */}
+          <button
+            onClick={() => onNavigate("dashboard")}
+            className="text-left transition-transform hover:scale-[1.02]"
+          >
+            <Logo variant={active === "investigations" ? "mint" : "blue"} />
+          </button>
+
+          {/* Navigation Links */}
+          <nav className="space-y-2">
+            {NAV_ITEMS.map((item) => {
+              const isActive = active === item.key
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => onNavigate(item.screen as Screen)}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-200 cursor-pointer",
+                    isActive
+                      ? "clay-nav-active"
+                      : "text-[var(--text-secondary)] hover:bg-white/60 hover:text-[var(--text-primary)]"
+                  )}
+                >
+                  <span className="flex items-center gap-3.5">
+                    <item.icon className="size-5" strokeWidth={2.2} />
+                    {item.label}
+                  </span>
+
+                  {item.badge ? (
+                    <span className="flex size-5 items-center justify-center rounded-full bg-[#ef4444] text-[10px] font-bold text-white shadow-sm">
+                      {alertCount}
+                    </span>
+                  ) : null}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+
+        {/* Bottom of Sidebar: Theme Toggle & User Info */}
+        <div className="space-y-4 pt-6 border-t border-[var(--text-muted)]/15">
+          {/* Theme Toggle Pill Switch */}
+          <div className="flex items-center justify-between px-2">
+            <span className="text-xs font-semibold text-[var(--text-secondary)] flex items-center gap-2">
+              {dark ? <Moon className="size-4 text-[#60a5fa]" /> : <Sun className="size-4 text-[#f59e0b]" />}
+              {dark ? "Dark mode" : "Light mode"}
+            </span>
+
+            <button
+              onClick={() => setDark(!dark)}
+              aria-label="Toggle dark mode"
+              className={cn(
+                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                dark ? "bg-[#2563eb]" : "bg-[#cbd5e1]"
+              )}
+            >
+              <span
+                className={cn(
+                  "pointer-events-none inline-block size-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out",
+                  dark ? "translate-x-5" : "translate-x-0"
+                )}
+              />
+            </button>
+          </div>
+
+          {/* User Profile Card */}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="clay-btn-secondary flex w-full items-center justify-between p-2.5 hover:bg-white transition-all cursor-pointer"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#dbeafe] text-xs font-black text-[#2563eb] shadow-inner">
+                  {initials}
+                </span>
+                <div className="text-left min-w-0">
+                  <p className="truncate text-xs font-bold text-[var(--text-primary)]">
+                    {currentUser?.full_name || "Lead Reviewer"}
+                  </p>
+                  <p className="truncate text-[10px] text-[var(--text-secondary)]">
+                    {currentUser?.role || "Reviewer"}
+                  </p>
+                </div>
+              </div>
+              <ChevronDown className="size-4 text-[var(--text-muted)] shrink-0" />
+            </button>
+
+            {userMenuOpen && (
+              <div className="clay-card absolute bottom-14 left-0 right-0 z-50 p-2 text-xs font-semibold bg-white/95 animate-fade-in shadow-xl">
+                <div className="p-2 border-b border-[var(--bg-app)]">
+                  <p className="text-[var(--text-primary)] truncate">{currentUser?.email || "reviewer@examvision.ai"}</p>
+                  <p className="text-[10px] text-[var(--text-muted)]">Active Workspace: University Hall</p>
+                </div>
+                <button
+                  onClick={onSignOut}
+                  className="flex w-full items-center gap-2 rounded-xl p-2 text-[#ef4444] hover:bg-red-50 transition-colors cursor-pointer"
+                >
+                  <LogOut className="size-4" />
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Top Header Bar matching Stitch designs */}
+        <header className="sticky top-0 z-20 flex h-20 items-center justify-between gap-6 px-6 sm:px-10">
+          {/* Search Bar matching Stitch reference */}
+          <div className="relative max-w-lg flex-1">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search sessions, students, exams..."
+              className="clay-search-bar h-11 w-full pl-11 pr-12 text-xs font-medium text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none transition-all focus:ring-2 focus:ring-[#3b82f6]/40"
+            />
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[var(--text-muted)]" />
+          </div>
+
+          {/* Right Header Actions */}
+          <div className="flex items-center gap-3.5">
+            {/* Notification Bell */}
+            <button
+              onClick={() => onNavigate("alerts")}
+              className="relative flex size-11 items-center justify-center rounded-full bg-white/90 text-[var(--text-secondary)] shadow-[0_4px_12px_rgba(140,170,205,0.3),inset_0_1.5px_2px_rgba(255,255,255,0.9)] transition-transform hover:scale-105 cursor-pointer"
+            >
+              <Bell className="size-5" />
+              {alertCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-[#ef4444] text-[9px] font-bold text-white shadow-sm">
+                  {alertCount}
+                </span>
+              )}
+            </button>
+
+            {/* User Avatar Circle */}
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="flex size-11 items-center justify-center rounded-full bg-[#dbeafe] text-sm font-black text-[#2563eb] shadow-[0_4px_12px_rgba(37,99,235,0.25),inset_0_1.5px_2px_rgba(255,255,255,0.9)] transition-transform hover:scale-105 cursor-pointer"
+            >
+              {initials}
+            </button>
+          </div>
+        </header>
+
+        {/* Page Content View */}
+        <main className="flex-1 overflow-y-auto px-6 pb-12 sm:px-10">
+          {children}
+        </main>
+      </div>
+    </div>
+  )
 }

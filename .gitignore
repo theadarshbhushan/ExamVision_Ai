@@ -36,7 +36,6 @@ AI-ML/models/
 AI-ML/runs/
 runs/
 
-
 # Debug and video artifacts
 *.avi
 *.jpg
@@ -49,3 +48,8 @@ test_snapshots/
 
 # Backend transient database and uploaded media files
 Backend/app/data/
+frontend_old/
+
+# OS artifacts
+.DS_Store
+**/.DS_Store

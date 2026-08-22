@@ -154,6 +154,7 @@ class Event(BaseModel):
 class ResultsResponse(BaseModel):
     video_name: str
     total_frames: int
+    total_duration: Optional[float] = None
     frames_sent_to_yolo: int
     bypass_ratio: float
     events: list[Event]
@@ -213,6 +214,8 @@ class UserResponse(BaseModel):
 
 class UserAuthResponse(BaseModel):
     user: UserResponse
+    access_token: Optional[str] = None
+    token_type: Optional[str] = "bearer"
 
 
 class TokenResponse(BaseModel):
@@ -221,3 +224,4 @@ class TokenResponse(BaseModel):
 
 class AuthErrorResponse(BaseModel):
     detail: str
+

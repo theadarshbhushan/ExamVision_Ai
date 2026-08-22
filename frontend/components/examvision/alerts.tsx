@@ -1,173 +1,252 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState, useEffect } from "react"
 import {
   AlertTriangle,
   Eye,
-  Volume2,
   MonitorX,
-  CheckCircle2,
-  BellOff,
+  Volume2,
+  ChevronLeft,
+  ChevronRight,
   Check,
 } from "lucide-react"
-import { ALERTS, type Alert, type Severity } from "@/lib/examvision-data"
-import { SeverityPill } from "./primitives"
+import { ALERTS, type Alert, type Severity, type ProctoringEvent } from "@/lib/examvision-data"
 import { cn } from "@/lib/utils"
 
-const FILTERS: (Severity | "All")[] = ["All", "Critical", "Medium", "Low"]
+export function Alerts({
+  events = [],
+  isDemo = true,
+  onOpenEvent,
+}: {
+  events?: ProctoringEvent[]
+  isDemo?: boolean
+  onOpenEvent?: (id: string) => void
+}) {
+  const dynamicAlerts: (Alert & { eventId?: string })[] = isDemo
+    ? ALERTS
+    : events
+        .filter((e) => e.severity === "Critical" || e.severity === "Medium" || e.status === "Flagged")
+        .map((e) => ({
+          id: `ALT-${e.id.replace(/^EVT-/, "")}`,
+          eventId: e.id,
+          title: `${e.detection} detected in ${e.session}`,
+          description: `Zone ${e.zone} · ${e.confidence}% confidence at ${e.timestamp}. ${e.notes || ""}`,
+          timestamp: e.timestamp,
+          severity: e.severity,
+          type: (e.detection.toLowerCase().includes("audio")
+            ? "audio"
+            : e.detection.toLowerCase().includes("tab")
+            ? "tab"
+            : e.detection.toLowerCase().includes("gaze") || e.detection.toLowerCase().includes("person")
+            ? "eye"
+            : "warning") as Alert["type"],
+        }))
 
-function iconFor(alert: Alert) {
-  const t = alert.title.toLowerCase()
-  if (t.includes("second person") || t.includes("candidates")) return Eye
-  if (t.includes("audio")) return Volume2
-  if (t.includes("tab")) return MonitorX
-  if (t.includes("complete")) return CheckCircle2
-  return AlertTriangle
-}
+  const [alerts, setAlerts] = useState<(Alert & { eventId?: string })[]>(dynamicAlerts)
+  const [filter, setFilter] = useState<"All" | "Critical" | "Medium" | "Low">("All")
+  const [currentPage, setCurrentPage] = useState(1)
 
-export function Alerts() {
-  const [alerts, setAlerts] = useState<Alert[]>(ALERTS)
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All")
-  const [removing, setRemoving] = useState<string[]>([])
+  useEffect(() => {
+    setAlerts(dynamicAlerts)
+  }, [events, isDemo])
 
-  const visible = alerts.filter(
-    (a) => filter === "All" || a.severity === filter,
-  )
+  const visible = alerts.filter((a) => filter === "All" || a.severity === filter)
 
   function dismiss(id: string) {
-    setRemoving((r) => [...r, id])
-    setTimeout(() => {
-      setAlerts((prev) => prev.filter((a) => a.id !== id))
-      setRemoving((r) => r.filter((x) => x !== id))
-    }, 280)
+    setAlerts((prev) => prev.filter((a) => a.id !== id))
+  }
+
+  function renderIcon(type: Alert["type"], severity: Severity) {
+    switch (type) {
+      case "warning":
+        return (
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ff6b6b] to-[#fa5252] text-white shadow-[0_4px_12px_rgba(250,82,82,0.35),inset_0_2px_3px_rgba(255,255,255,0.7)]">
+            <AlertTriangle className="size-6" strokeWidth={2.5} />
+          </span>
+        )
+      case "eye":
+        return (
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ff6b6b] to-[#fa5252] text-white shadow-[0_4px_12px_rgba(250,82,82,0.35),inset_0_2px_3px_rgba(255,255,255,0.7)]">
+            <Eye className="size-6" strokeWidth={2.5} />
+          </span>
+        )
+      case "tab":
+        return (
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#fd7e14] to-[#f76707] text-white shadow-[0_4px_12px_rgba(247,103,7,0.35),inset_0_2px_3px_rgba(255,255,255,0.7)]">
+            <MonitorX className="size-6" strokeWidth={2.5} />
+          </span>
+        )
+      case "audio":
+        return (
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#fcc419] to-[#fab005] text-white shadow-[0_4px_12px_rgba(250,176,5,0.35),inset_0_2px_3px_rgba(255,255,255,0.7)]">
+            <Volume2 className="size-6" strokeWidth={2.5} />
+          </span>
+        )
+      default:
+        return (
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#3b82f6] to-[#2563eb] text-white shadow-[0_4px_12px_rgba(37,99,235,0.35),inset_0_2px_3px_rgba(255,255,255,0.7)]">
+            <AlertTriangle className="size-6" strokeWidth={2.5} />
+          </span>
+        )
+    }
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Alerts
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Prioritized integrity signals across all active exams.
-          </p>
+    <div className="space-y-6 animate-fade-in">
+      {/* Page Title matching alert.png */}
+      <div>
+        <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
+          Alerts
+        </h1>
+      </div>
+
+      {/* Filter Row matching alert.png */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setFilter("All")}
+            className={cn(
+              "clay-btn-secondary px-5 py-2 text-xs font-bold transition-all",
+              filter === "All"
+                ? "bg-white text-[#2563eb] shadow-[0_4px_12px_rgba(37,99,235,0.25),inset_0_2px_3px_rgba(255,255,255,1)]"
+                : "text-[var(--text-secondary)]"
+            )}
+          >
+            All
+          </button>
+
+          <button
+            onClick={() => setFilter("Critical")}
+            className={cn(
+              "clay-btn-secondary flex items-center gap-2 px-5 py-2 text-xs font-bold transition-all",
+              filter === "Critical"
+                ? "bg-white text-[#ef4444] shadow-[0_4px_12px_rgba(239,68,68,0.25),inset_0_2px_3px_rgba(255,255,255,1)]"
+                : "text-[var(--text-secondary)]"
+            )}
+          >
+            <span className="size-2 rounded-full bg-[#ef4444]" />
+            Critical
+          </button>
+
+          <button
+            onClick={() => setFilter("Medium")}
+            className={cn(
+              "clay-btn-secondary flex items-center gap-2 px-5 py-2 text-xs font-bold transition-all",
+              filter === "Medium"
+                ? "bg-white text-[#f97316] shadow-[0_4px_12px_rgba(249,115,22,0.25),inset_0_2px_3px_rgba(255,255,255,1)]"
+                : "text-[var(--text-secondary)]"
+            )}
+          >
+            <span className="size-2 rounded-full bg-[#f97316]" />
+            Medium
+          </button>
+
+          <button
+            onClick={() => setFilter("Low")}
+            className={cn(
+              "clay-btn-secondary flex items-center gap-2 px-5 py-2 text-xs font-bold transition-all",
+              filter === "Low"
+                ? "bg-white text-[#eab308] shadow-[0_4px_12px_rgba(234,179,8,0.25),inset_0_2px_3px_rgba(255,255,255,1)]"
+                : "text-[var(--text-secondary)]"
+            )}
+          >
+            <span className="size-2 rounded-full bg-[#eab308]" />
+            Low
+          </button>
         </div>
+
         <button
           onClick={() => setAlerts([])}
-          disabled={alerts.length === 0}
-          className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+          className="clay-btn-secondary px-5 py-2 text-xs font-bold text-[var(--text-primary)]"
         >
-          <Check className="size-4" />
           Mark all as read
         </button>
       </div>
 
-      {/* Filter chips */}
-      <div className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => {
-          const count =
-            f === "All"
-              ? alerts.length
-              : alerts.filter((a) => a.severity === f).length
-          return (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
-                filter === f
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {f}
-              <span
-                className={cn(
-                  "rounded-full px-1.5 text-xs",
-                  filter === f
-                    ? "bg-primary-foreground/20"
-                    : "bg-secondary text-muted-foreground",
-                )}
-              >
-                {count}
+      {/* Alert Cards matching alert.png */}
+      <div className="space-y-4">
+        {visible.map((alert) => (
+          <div
+            key={alert.id}
+            className="clay-card flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center bg-white/95"
+          >
+            {/* Left: Icon + Content */}
+            <div className="flex items-center gap-4.5 min-w-0">
+              {renderIcon(alert.type, alert.severity)}
+
+              <div className="min-w-0">
+                <h3 className="text-[15px] font-bold text-[var(--text-primary)]">
+                  {alert.title}
+                </h3>
+                <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                  {alert.description}
+                </p>
+              </div>
+            </div>
+
+            {/* Right: Quick Action */}
+            <div className="flex flex-col items-end shrink-0 self-end sm:self-center">
+              <span className="text-[11px] font-medium text-[var(--text-muted)]">
+                Quick action
               </span>
-            </button>
-          )
-        })}
+              {alert.type === "audio" ? (
+                <button
+                  onClick={() => dismiss(alert.id)}
+                  className="text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                >
+                  Dismiss
+                </button>
+              ) : (
+                <button
+                  onClick={() => onOpenEvent && onOpenEvent(alert.eventId || "EVT-073481")}
+                  className="text-xs font-bold text-[#2563eb] hover:underline cursor-pointer"
+                >
+                  View Details
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {visible.length === 0 && (
+          <div className="clay-card py-16 text-center text-[var(--text-secondary)]">
+            <Check className="mx-auto size-8 text-[#10b981] mb-2" />
+            <p className="font-semibold text-[var(--text-primary)]">All caught up!</p>
+            <p className="text-xs mt-1">No alerts matching the selected filter.</p>
+          </div>
+        )}
       </div>
 
-      {/* List */}
-      {visible.length > 0 ? (
-        <div className="space-y-3">
-          {visible.map((alert) => {
-            const Icon = iconFor(alert)
-            const isRemoving = removing.includes(alert.id)
-            return (
-              <div
-                key={alert.id}
-                className={cn(
-                  "flex items-start gap-4 rounded-xl border border-border bg-card p-4 shadow-sm transition-all duration-300",
-                  isRemoving
-                    ? "translate-x-2 opacity-0"
-                    : "translate-x-0 opacity-100",
-                )}
-              >
-                <span
-                  className={cn(
-                    "flex size-10 shrink-0 items-center justify-center rounded-lg",
-                    alert.severity === "Critical"
-                      ? "bg-destructive/10 text-destructive"
-                      : alert.severity === "Medium"
-                        ? "bg-warning/15 text-warning-foreground"
-                        : "bg-secondary text-muted-foreground",
-                  )}
-                >
-                  <Icon className="size-5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="font-medium text-foreground">{alert.title}</p>
-                    <SeverityPill severity={alert.severity} />
-                  </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {alert.description}
-                  </p>
-                  <div className="mt-3 flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground">
-                      {alert.timestamp}
-                    </span>
-                    <span className="text-border">·</span>
-                    <button className="text-xs font-medium text-primary hover:underline">
-                      Review
-                    </button>
-                    <button
-                      onClick={() => dismiss(alert.id)}
-                      className="text-xs font-medium text-muted-foreground hover:text-foreground"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-secondary/30 px-6 py-20 text-center">
-          <span className="flex size-12 items-center justify-center rounded-full bg-accent text-accent-foreground">
-            <BellOff className="size-6" />
-          </span>
-          <p className="mt-4 text-base font-medium text-foreground">
-            You&apos;re all caught up
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {alerts.length === 0
-              ? "No alerts left in your queue."
-              : `No ${filter.toLowerCase()} alerts right now.`}
-          </p>
-        </div>
-      )}
+      {/* Pagination matching alert.png */}
+      <div className="mt-8 flex items-center justify-center gap-2">
+        <button className="clay-btn-secondary flex size-8 items-center justify-center rounded-lg text-xs font-bold text-[var(--text-secondary)]">
+          <ChevronLeft className="size-3.5" />
+        </button>
+        {[1, 2, 3].map((page) => (
+          <button
+            key={page}
+            onClick={() => setCurrentPage(page)}
+            className={cn(
+              "flex size-8 items-center justify-center rounded-lg text-xs font-bold transition-all",
+              currentPage === page
+                ? "bg-white text-[#2563eb] shadow-[0_4px_10px_rgba(37,99,235,0.25),inset_0_2px_3px_rgba(255,255,255,0.9)]"
+                : "text-[var(--text-secondary)] hover:bg-white/50"
+            )}
+          >
+            {page}
+          </button>
+        ))}
+        <span className="px-1 text-xs text-[var(--text-secondary)]">...</span>
+        <button
+          onClick={() => setCurrentPage(8)}
+          className="flex size-8 items-center justify-center rounded-lg text-xs font-bold text-[var(--text-secondary)] hover:bg-white/50"
+        >
+          8
+        </button>
+        <button className="clay-btn-secondary flex size-8 items-center justify-center rounded-lg text-xs font-bold text-[var(--text-secondary)]">
+          <ChevronRight className="size-3.5" />
+        </button>
+      </div>
     </div>
   )
 }

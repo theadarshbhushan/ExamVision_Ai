@@ -29,13 +29,13 @@ class ExamVisionPipeline:
             'learning_rate': 0.002,
             'grid_rows': 3,
             'grid_cols': 3,
-            'motion_threshold': 0.02,
+            'motion_threshold': 0.1,
             'vibration_suppression_enabled': True,
             'vibration_intensity_threshold': 0.01,
             'vibration_active_zone_ratio': 0.70
         }
         self.segmenter_config = segmenter_config or {
-            'motion_threshold': 0.02,
+            'motion_threshold': 0.1,
             'min_event_frames': 4,
             'max_gap_frames': 8
         }
@@ -60,11 +60,15 @@ class ExamVisionPipeline:
         os.makedirs(ref_dir, exist_ok=True)
         os.makedirs(ann_dir, exist_ok=True)
 
-        # 1. Retrieve total frames and video properties
+        # 1. Retrieve total frames, fps, and video properties
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             raise IOError(f"Could not open video file: {video_path}")
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        if fps <= 0:
+            fps = 10.0
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        total_duration = round(total_frames / fps, 2) if fps > 0 else 0.0
         cap.release()
 
         # 2. Run motion detection (Offline first-tier processing)
@@ -97,10 +101,23 @@ class ExamVisionPipeline:
             print(f"DEBUG: Event #{event_id} | Zone: {ev['zone_id']} | start_time: {ev['start_time']:.2f}s | end_time: {ev['end_time']:.2f}s | before_frame_idx: {max(0, after_frame_idx - 15)} | after_frame_idx: {after_frame_idx} | Gap: 15")
             
             detections = []
+            before_path = None
+            after_path = None
             annotated_path = None
             ref_path = None
             
             if after_frame is not None:
+                output_dir = os.path.join(self.data_dir, "snapshots", video_name)
+                os.makedirs(output_dir, exist_ok=True)
+
+                after_filename = f"event_{event_id}_after.jpg"
+                after_path = os.path.join(output_dir, after_filename)
+                cv2.imwrite(after_path, after_frame)
+
+                ref_filename = f"event_{event_id}.jpg"
+                ref_path = os.path.join(ref_dir, ref_filename)
+                cv2.imwrite(ref_path, after_frame)
+
                 # Check cache to avoid duplicate YOLO runs on co-occurring events sharing the same after frame
                 if after_frame_idx not in detections_cache:
                     # Save a copy of that EXACT frame (uncropped, full frame) to /data/debug/yolo_input_frames/event_{id}.jpg
@@ -118,19 +135,18 @@ class ExamVisionPipeline:
                 else:
                     detections, _ = detections_cache[after_frame_idx]
                 
-                # Save raw reference frame inside a video-specific subfolder
-                ref_filename = f"event_{event_id}.jpg"
-                ref_path = os.path.join(ref_dir, ref_filename)
-                cv2.imwrite(ref_path, after_frame)
-
-                # If any objects are detected, annotate the full-frame after snapshot and save it
-                if detections:
-                    annotated_frame = self._draw_annotations(after_frame, detections)
-                    
-                    # Save annotated full-frame image inside a video-specific subfolder
-                    annotated_filename = f"event_{event_id}.jpg"
-                    annotated_path = os.path.join(ann_dir, annotated_filename)
-                    cv2.imwrite(annotated_path, annotated_frame)
+                # Generate annotated full-frame evidence snapshot (YOLO bounding boxes or motion zone highlight)
+                annotated_frame = self._draw_annotations(
+                    after_frame,
+                    detections,
+                    zone_id=ev['zone_id'],
+                    motion_intensity=ev['avg_motion_intensity']
+                )
+                
+                # Save annotated full-frame image inside a video-specific subfolder
+                annotated_filename = f"event_{event_id}.jpg"
+                annotated_path = os.path.join(ann_dir, annotated_filename)
+                cv2.imwrite(annotated_path, annotated_frame)
                     
             results.append({
                 'event_id': event_id,
@@ -139,8 +155,8 @@ class ExamVisionPipeline:
                 'zone_id': ev['zone_id'],
                 'motion_intensity': ev['avg_motion_intensity'],
                 'detections': detections,
-                'before_snapshot_path': None,
-                'after_snapshot_path': None,
+                'before_snapshot_path': before_path,
+                'after_snapshot_path': after_path,
                 'annotated_snapshot_path': annotated_path,
                 'reference_snapshot_path': ref_path
             })
@@ -161,37 +177,62 @@ class ExamVisionPipeline:
         return {
             'results_path': results_path,
             'total_frames': total_frames,
+            'total_duration': total_duration,
             'yolo_frames': yolo_frames_count,
             'events': results
         }
 
-    def _draw_annotations(self, image, detections):
+    def _draw_annotations(self, image, detections, zone_id=None, motion_intensity=None):
         """
         Draws bounding boxes and labels for YOLO detections onto the full frame image.
+        If no YOLO detections are present, annotates the active motion zone.
         """
         annotated = image.copy()
-        for det in detections:
-            bbox = det['bounding_box']
-            x1, y1, x2, y2 = [int(round(coord)) for coord in bbox]
-            label = f"{det['class_name']}"
-            
-            # Calculate text size
-            (text_w, text_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-            
-            # Position label and back-plate rectangle cleanly
-            y_text = y1 - 5
-            if y_text - text_h < 0:
-                # Text goes off-screen top; place text box inside the bounding box boundary
-                cv2.rectangle(annotated, (x1, y1), (x1 + text_w + 10, y1 + text_h + 10), (0, 0, 255), -1)
-                cv2.putText(annotated, label, (x1 + 5, y1 + text_h + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
-            else:
-                # Place text box above the bounding box boundary
-                cv2.rectangle(annotated, (x1, y1 - text_h - 10), (x1 + text_w + 10, y1), (0, 0, 255), -1)
-                cv2.putText(annotated, label, (x1 + 5, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+        if detections:
+            for det in detections:
+                bbox = det['bounding_box']
+                x1, y1, x2, y2 = [int(round(coord)) for coord in bbox]
+                label = f"{det['class_name']}"
                 
-            # Draw primary red bounding box around the detected cheating element
-            cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 0, 255), 2)
-            
+                # Calculate text size
+                (text_w, text_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+                
+                # Position label and back-plate rectangle cleanly
+                y_text = y1 - 5
+                if y_text - text_h < 0:
+                    # Text goes off-screen top; place text box inside the bounding box boundary
+                    cv2.rectangle(annotated, (x1, y1), (x1 + text_w + 10, y1 + text_h + 10), (0, 0, 255), -1)
+                    cv2.putText(annotated, label, (x1 + 5, y1 + text_h + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                else:
+                    # Place text box above the boundary
+                    cv2.rectangle(annotated, (x1, y1 - text_h - 10), (x1 + text_w + 10, y1), (0, 0, 255), -1)
+                    cv2.putText(annotated, label, (x1 + 5, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                    
+                # Draw primary red bounding box around the detected cheating element
+                cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 0, 255), 2)
+        elif zone_id is not None:
+            # Motion-detected event: highlight the active motion zone
+            h, w = annotated.shape[:2]
+            pixel_zones = self.motion_detector._get_pixel_zones(w, h)
+            target_zone = next((z for z in pixel_zones if z['id'] == zone_id), None)
+            if target_zone:
+                x1, y1 = target_zone['x_start'], target_zone['y_start']
+                x2, y2 = target_zone['x_end'], target_zone['y_end']
+                
+                # Semi-transparent colored overlay for the active motion zone
+                overlay = annotated.copy()
+                cv2.rectangle(overlay, (x1, y1), (x2, y2), (0, 165, 255), -1)  # Amber/Orange in BGR
+                cv2.addWeighted(overlay, 0.2, annotated, 0.8, 0, dst=annotated)
+                
+                # Boundary around active zone
+                cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 165, 255), 2)
+                
+                # Label for motion zone
+                label = f"Zone {zone_id}: Motion Detected"
+                (text_w, text_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+                cv2.rectangle(annotated, (x1, y1), (x1 + text_w + 10, y1 + text_h + 10), (0, 165, 255), -1)
+                cv2.putText(annotated, label, (x1 + 5, y1 + text_h + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                
         return annotated
 
 def run_pipeline(video_path, model_path=None, motion_config=None, segmenter_config=None):
@@ -235,14 +276,21 @@ if __name__ == "__main__":
         for ev in output.get("events", []):
             event_id = ev["event_id"]
             ann_path = ev.get("annotated_snapshot_path")
+            after_path = ev.get("after_snapshot_path")
+            ref_path = ev.get("reference_snapshot_path")
             
-            copied_snapshot_path = None
+            copied_ann_path = None
             if ann_path and os.path.exists(ann_path):
                 dest_path = os.path.join(args.snapshot_dir, f"event_{event_id}.jpg")
                 shutil.copy2(ann_path, dest_path)
-                copied_snapshot_path = dest_path
+                copied_ann_path = dest_path
+
+            copied_after_path = None
+            if after_path and os.path.exists(after_path):
+                dest_after = os.path.join(args.snapshot_dir, f"event_{event_id}_after.jpg")
+                shutil.copy2(after_path, dest_after)
+                copied_after_path = dest_after
             
-            ref_path = ev.get("reference_snapshot_path")
             copied_ref_path = None
             if ref_path and os.path.exists(ref_path):
                 dest_ref_path = os.path.join(args.snapshot_dir, f"event_{event_id}_ref.jpg")
@@ -258,8 +306,8 @@ if __name__ == "__main__":
                 "motion_intensity": ev["motion_intensity"],
                 "detections": ev["detections"],
                 "before_snapshot": None,
-                "after_snapshot": None,
-                "annotated_snapshot": copied_snapshot_path,
+                "after_snapshot": copied_after_path,
+                "annotated_snapshot": copied_ann_path,
                 "reference_snapshot": copied_ref_path
             }
             reshaped_events.append(reshaped_ev)
@@ -268,6 +316,7 @@ if __name__ == "__main__":
         final_output = {
             "video_name": os.path.splitext(os.path.basename(args.input))[0],
             "total_frames": output.get("total_frames", 0),
+            "total_duration": output.get("total_duration", 0.0),
             "frames_sent_to_yolo": output.get("yolo_frames", 0),
             "events": reshaped_events
         }
@@ -284,4 +333,3 @@ if __name__ == "__main__":
         print(f"Error executing pipeline: {e}", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
-

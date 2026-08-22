@@ -1,18 +1,27 @@
 "use client"
 
+import React, { useState } from "react"
 import {
   ArrowRight,
+  TrendingUp,
+  TrendingDown,
+  User as UserIcon,
+  Flag,
+  Shield,
   Upload,
   Cpu,
   FileCheck2,
-  ShieldCheck,
   Eye,
+  Users,
   BellRing,
   BarChart3,
-  Users,
   Lock,
+  ShieldCheck,
+  Check,
 } from "lucide-react"
-import { Logo } from "./primitives"
+import { Logo, ClayCard } from "./primitives"
+import { AuthModal } from "./auth-modal"
+import type { User } from "@/lib/api-client"
 
 const NAV_LINKS = [
   { label: "How it works", href: "#how-it-works" },
@@ -20,110 +29,90 @@ const NAV_LINKS = [
   { label: "Pricing", href: "#pricing" },
 ]
 
-const STEPS = [
-  {
-    icon: Upload,
-    title: "Upload session video",
-    body: "Drop in proctoring recordings individually or as a batch. We support every major exam platform export.",
-  },
-  {
-    icon: Cpu,
-    title: "AI analyzes every frame",
-    body: "Our models track gaze, faces, audio and environment signals to surface anomalies with confidence scores.",
-  },
-  {
-    icon: FileCheck2,
-    title: "Review & report",
-    body: "Investigators confirm or dismiss flags in one click, then export audit-ready integrity reports.",
-  },
-]
-
-const FEATURES = [
-  {
-    icon: Eye,
-    title: "Gaze & attention tracking",
-    body: "Detect repeated off-screen glances and attention loss without punishing natural movement.",
-  },
-  {
-    icon: Users,
-    title: "Second-person detection",
-    body: "Instantly flag additional faces or voices that appear during a monitored session.",
-  },
-  {
-    icon: BellRing,
-    title: "Real-time alerts",
-    body: "Prioritized, deduplicated notifications so your team focuses on what actually matters.",
-  },
-  {
-    icon: BarChart3,
-    title: "Integrity analytics",
-    body: "Understand flag trends across exams, cohorts and terms with clear dashboards.",
-  },
-  {
-    icon: Lock,
-    title: "Privacy by design",
-    body: "Role-based access, retention controls and full evidence chains keep candidate data protected.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Audit-ready reports",
-    body: "Every decision is logged with reviewer, timestamp and evidence for defensible outcomes.",
-  },
-]
-
-function PrimaryButton({
-  children,
-  onClick,
-  className = "",
-}: {
-  children: React.ReactNode
-  onClick?: () => void
-  className?: string
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 ${className}`}
-    >
-      {children}
-    </button>
-  )
-}
-
 export function Landing({
-  onLogin,
-  onGetStarted,
+  onAuthenticated,
 }: {
-  onLogin: () => void
-  onGetStarted: () => void
+  onAuthenticated: (user: User) => void
 }) {
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<"login" | "register">("login")
+
+  function openAuth(mode: "login" | "register") {
+    setAuthMode(mode)
+    setAuthModalOpen(true)
+  }
+
+  function handleDemoAccess() {
+    const demoUser: User = {
+      id: "demo-reviewer-1",
+      email: "reviewer@examvision.ai",
+      full_name: "Lead Reviewer",
+      role: "reviewer",
+      is_active: true,
+      created_at: new Date().toISOString(),
+    }
+    onAuthenticated(demoUser)
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Nav */}
-      <header className="sticky top-0 z-40 border-b border-border/80 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#eef6fc] via-[#e8f3f8] to-[#e4f4f1] text-[var(--text-primary)]">
+      {/* Decorative 3D Clay Shapes Floating in Background (as in landing.png) */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {/* Left top mint/cyan prism & sphere */}
+        <div className="animate-float-slow absolute -left-12 top-24 size-44 rounded-full bg-gradient-to-tr from-[#93e4c8] to-[#6ee7b7] opacity-60 blur-sm shadow-[0_20px_50px_rgba(16,185,129,0.3),inset_0_4px_10px_rgba(255,255,255,0.8)]" />
+        <div className="animate-float-reverse absolute left-16 top-52 size-20 rounded-2xl rotate-45 bg-gradient-to-br from-[#93c5fd] to-[#60a5fa] opacity-70 shadow-[0_16px_36px_rgba(59,130,246,0.3),inset_0_4px_8px_rgba(255,255,255,0.8)]" />
+        
+        {/* Left bottom large soft blue/mint clay spheres */}
+        <div className="animate-float-slow absolute -left-20 bottom-12 size-72 rounded-full bg-gradient-to-tr from-[#60a5fa] via-[#93c5fd] to-[#bfdbfe] opacity-50 shadow-[0_30px_70px_rgba(59,130,246,0.35),inset_0_8px_16px_rgba(255,255,255,0.9)]" />
+        <div className="animate-float-reverse absolute left-36 bottom-4 size-32 rounded-full bg-gradient-to-tr from-[#34d399] to-[#6ee7b7] opacity-60 shadow-[0_20px_40px_rgba(16,185,129,0.3),inset_0_6px_12px_rgba(255,255,255,0.9)]" />
+
+        {/* Right top blue & mint clay spheres */}
+        <div className="animate-float-slow absolute right-16 top-16 size-24 rounded-full bg-gradient-to-tr from-[#3b82f6] to-[#93c5fd] opacity-60 shadow-[0_16px_36px_rgba(37,99,235,0.3),inset_0_4px_8px_rgba(255,255,255,0.9)]" />
+        <div className="animate-float-reverse absolute -right-16 top-36 size-60 rounded-full bg-gradient-to-tr from-[#10b981] to-[#a7f3d0] opacity-45 shadow-[0_25px_60px_rgba(16,185,129,0.3),inset_0_6px_14px_rgba(255,255,255,0.9)]" />
+        
+        {/* Right bottom spheres */}
+        <div className="animate-float-slow absolute right-12 bottom-36 size-20 rounded-full bg-gradient-to-tr from-[#34d399] to-[#6ee7b7] opacity-50 shadow-[0_12px_30px_rgba(16,185,129,0.25)]" />
+        <div className="animate-float-reverse absolute -right-24 bottom-6 size-80 rounded-full bg-gradient-to-tr from-[#60a5fa] to-[#bfdbfe] opacity-40 shadow-[0_30px_70px_rgba(59,130,246,0.3)]" />
+      </div>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        initialMode={authMode}
+        onClose={() => setAuthModalOpen(false)}
+        onSuccess={(user) => {
+          setAuthModalOpen(false)
+          onAuthenticated(user)
+        }}
+      />
+
+      {/* Top Navbar matching landing.png */}
+      <header className="relative z-30 mx-auto max-w-7xl px-6 pt-6 sm:px-10">
+        <div className="flex h-16 items-center justify-between">
           <Logo />
-          <nav className="hidden items-center gap-8 md:flex">
+
+          <nav className="hidden items-center gap-10 md:flex">
             {NAV_LINKS.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                className="text-[15px] font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
               >
                 {link.label}
               </a>
             ))}
           </nav>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-4">
             <button
-              onClick={onLogin}
-              className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              onClick={() => openAuth("login")}
+              className="text-[15px] font-semibold text-[var(--text-primary)] transition-colors hover:text-[#2563eb]"
             >
               Log in
             </button>
             <button
-              onClick={onGetStarted}
-              className="inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+              onClick={() => openAuth("register")}
+              className="clay-btn-primary px-6 py-2.5 text-[15px]"
             >
               Get started
             </button>
@@ -131,197 +120,150 @@ export function Landing({
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="mx-auto max-w-6xl px-6 pb-8 pt-20">
-        <div className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm">
-            <span className="size-1.5 rounded-full bg-success" />
-            Trusted by 240+ academic institutions
-          </span>
-          <h1 className="mt-6 text-balance text-4xl font-semibold tracking-tight text-foreground sm:text-5xl md:text-6xl">
-            Exam integrity, backed by intelligent video analysis
-          </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">
-            ExamVision AI reviews proctoring footage frame by frame, surfaces the
-            moments that matter, and gives your team defensible, audit-ready
-            decisions — without watching hours of video.
-          </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <PrimaryButton onClick={onGetStarted}>
-              Get started free
-              <ArrowRight className="size-4" />
-            </PrimaryButton>
-            <button
-              onClick={onLogin}
-              className="inline-flex h-11 items-center justify-center rounded-lg border border-border bg-card px-5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted"
-            >
-              Book a demo
-            </button>
-          </div>
-          <p className="mt-4 text-xs text-muted-foreground">
-            No credit card required · SOC 2 Type II · FERPA aligned
-          </p>
+      {/* Hero Section matching landing.png */}
+      <main className="relative z-20 mx-auto max-w-5xl px-6 pt-16 pb-24 text-center sm:px-8 sm:pt-20">
+        <h1 className="mx-auto max-w-4xl text-balance text-4xl font-extrabold tracking-tight text-[#0f1e36] sm:text-5xl md:text-[56px] md:leading-[1.18]">
+          Exam integrity, backed by intelligent video analysis
+        </h1>
+
+        <p className="mx-auto mt-6 max-w-3xl text-pretty text-base font-normal leading-relaxed text-[#5a718d] sm:text-lg">
+          ExamVision AI reviews proctoring footage frame by frame, surfaces the moments that matter, and gives your team defensible, audit-ready decisions — without watching hours of video.
+        </p>
+
+        {/* CTA Buttons */}
+        <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <button
+            onClick={() => openAuth("register")}
+            className="clay-btn-primary flex items-center gap-2.5 px-8 py-3.5 text-base font-semibold shadow-lg hover:scale-105"
+          >
+            Get started free
+            <ArrowRight className="size-4" strokeWidth={2.5} />
+          </button>
+          <button
+            onClick={handleDemoAccess}
+            className="clay-btn-secondary px-8 py-3.5 text-base font-semibold transition-transform hover:scale-105"
+          >
+            Book a demo
+          </button>
         </div>
 
-        {/* Hero preview card */}
-        <div className="mx-auto mt-16 max-w-5xl">
-          <div className="rounded-2xl border border-border bg-card p-2 shadow-sm">
-            <div className="rounded-xl border border-border bg-secondary/50">
-              <div className="flex items-center gap-1.5 border-b border-border px-4 py-3">
-                <span className="size-2.5 rounded-full bg-border" />
-                <span className="size-2.5 rounded-full bg-border" />
-                <span className="size-2.5 rounded-full bg-border" />
-                <span className="ml-3 text-xs text-muted-foreground">
-                  app.examvision.ai/dashboard
+        {/* Hero Clay Dock Card (matching landing.png exactly) */}
+        <div className="mx-auto mt-16 max-w-3xl">
+          <div className="clay-card relative overflow-hidden p-8 sm:p-10 border border-white/60 bg-white/95">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              {/* Tile 1: Sessions analyzed */}
+              <div className="flex items-center gap-4.5 rounded-2xl bg-[#f6faff] p-4 transition-transform hover:scale-[1.02] shadow-[inset_0_2px_4px_rgba(180,205,235,0.2)] border border-blue-50">
+                <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#cbe4ff] to-[#9ecbff] text-[#1d4ed8] shadow-[0_6px_14px_rgba(59,130,246,0.25),inset_0_2px_3px_rgba(255,255,255,0.8)]">
+                  <TrendingUp className="size-7" strokeWidth={2.5} />
                 </span>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-[#5a718d]">Sessions analyzed</p>
+                  <p className="mt-0.5 text-2xl font-bold tracking-tight text-[#0f1e36] flex items-center gap-1.5">
+                    1,284 <span className="text-lg font-bold text-[#10b981]">↗</span>
+                  </p>
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-3 p-4 sm:grid-cols-4">
-                {[
-                  { k: "Sessions analyzed", v: "1,284" },
-                  { k: "Active investigations", v: "37" },
-                  { k: "Flags this week", v: "92" },
-                  { k: "Integrity score", v: "94.2%" },
-                ].map((s) => (
-                  <div
-                    key={s.k}
-                    className="rounded-lg border border-border bg-card p-4 shadow-sm last:hidden sm:last:block"
-                  >
-                    <p className="text-xs text-muted-foreground">{s.k}</p>
-                    <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-                      {s.v}
-                    </p>
-                  </div>
-                ))}
+
+              {/* Tile 2: Active investigations */}
+              <div className="flex items-center gap-4.5 rounded-2xl bg-[#f6faff] p-4 transition-transform hover:scale-[1.02] shadow-[inset_0_2px_4px_rgba(180,205,235,0.2)] border border-blue-50">
+                <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#c8f7dc] to-[#99eec3] text-[#065f46] shadow-[0_6px_14px_rgba(16,185,129,0.25),inset_0_2px_3px_rgba(255,255,255,0.8)]">
+                  <UserIcon className="size-7" strokeWidth={2.5} />
+                </span>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-[#5a718d]">Active investigations</p>
+                  <p className="mt-0.5 text-2xl font-bold tracking-tight text-[#0f1e36]">
+                    37
+                  </p>
+                </div>
+              </div>
+
+              {/* Tile 3: Flags this week */}
+              <div className="flex items-center gap-4.5 rounded-2xl bg-[#f6faff] p-4 transition-transform hover:scale-[1.02] shadow-[inset_0_2px_4px_rgba(180,205,235,0.2)] border border-blue-50">
+                <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ffd5d5] to-[#ffa8a8] text-[#c92a2a] shadow-[0_6px_14px_rgba(239,68,68,0.25),inset_0_2px_3px_rgba(255,255,255,0.8)]">
+                  <Flag className="size-7" strokeWidth={2.5} />
+                </span>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-[#5a718d]">Flags this week</p>
+                  <p className="mt-0.5 text-2xl font-bold tracking-tight text-[#0f1e36] flex items-center gap-1.5">
+                    92 <span className="text-lg font-bold text-[#e03131]">↘</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Tile 4: Integrity score */}
+              <div className="flex items-center gap-4.5 rounded-2xl bg-[#f6faff] p-4 transition-transform hover:scale-[1.02] shadow-[inset_0_2px_4px_rgba(180,205,235,0.2)] border border-blue-50">
+                <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#c8f7dc] to-[#99eec3] text-[#065f46] shadow-[0_6px_14px_rgba(16,185,129,0.25),inset_0_2px_3px_rgba(255,255,255,0.8)]">
+                  <Shield className="size-7" strokeWidth={2.5} />
+                </span>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-[#5a718d]">Integrity score</p>
+                  <p className="mt-0.5 text-2xl font-bold tracking-tight text-[#0f1e36] flex items-center gap-1.5">
+                    94.2% <span className="text-lg font-bold text-[#10b981]">↗</span>
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </section>
 
-      {/* How it works */}
-      <section id="how-it-works" className="scroll-mt-20 mx-auto max-w-6xl px-6 py-20">
-        <div className="max-w-2xl">
-          <p className="text-sm font-medium text-primary">How it works</p>
-          <h2 className="mt-2 text-balance text-3xl font-semibold tracking-tight text-foreground">
-            From raw footage to a defensible decision in three steps
-          </h2>
-        </div>
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {STEPS.map((step, i) => (
-            <div
-              key={step.title}
-              className="rounded-xl border border-border bg-card p-6 shadow-sm"
-            >
-              <div className="flex items-center justify-between">
-                <span className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-                  <step.icon className="size-5" />
-                </span>
-                <span className="text-sm font-medium text-muted-foreground">
-                  0{i + 1}
-                </span>
-              </div>
-              <h3 className="mt-5 text-lg font-semibold text-foreground">
-                {step.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {step.body}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Features */}
-      <section id="security" className="scroll-mt-20 border-y border-border bg-secondary/40">
-        <div className="mx-auto max-w-6xl px-6 py-20">
-          <div className="max-w-2xl">
-            <p className="text-sm font-medium text-primary">Platform</p>
-            <h2 className="mt-2 text-balance text-3xl font-semibold tracking-tight text-foreground">
-              Everything your integrity team needs in one workspace
+        {/* Feature Highlights Section */}
+        <section id="how-it-works" className="mt-28 text-left">
+          <div className="text-center">
+            <span className="clay-pill-blue px-4 py-1 text-xs font-bold uppercase tracking-wider">
+              Workflows
+            </span>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#0f1e36]">
+              Intelligent Proctoring in Three Simple Steps
             </h2>
           </div>
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((f) => (
-              <div
-                key={f.title}
-                className="rounded-xl border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
-              >
-                <span className="flex size-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-                  <f.icon className="size-5" />
-                </span>
-                <h3 className="mt-5 text-base font-semibold text-foreground">
-                  {f.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {f.body}
-                </p>
+
+          <div className="mt-12 grid gap-8 md:grid-cols-3">
+            {[
+              {
+                icon: Upload,
+                step: "01",
+                title: "Upload session video",
+                desc: "Drop in proctoring recordings individually or as a batch. Supports MP4, MOV, and AVI.",
+              },
+              {
+                icon: Cpu,
+                step: "02",
+                title: "AI analyzes every frame",
+                desc: "Computer vision models track gaze, extra persons, audio anomalies, and tab changes.",
+              },
+              {
+                icon: FileCheck2,
+                step: "03",
+                title: "Defensible decisions",
+                desc: "Reviewers confirm or dismiss flagged events with 1 click and export audit-ready PDF/CSV reports.",
+              },
+            ].map((s) => (
+              <div key={s.step} className="clay-card p-7 border border-white/80 bg-white/90">
+                <div className="flex items-center justify-between">
+                  <span className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#3b82f6] to-[#60a5fa] text-white shadow-md">
+                    <s.icon className="size-6" />
+                  </span>
+                  <span className="text-2xl font-black text-[#93c5fd]">{s.step}</span>
+                </div>
+                <h3 className="mt-5 text-lg font-bold text-[#0f1e36]">{s.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-[#5a718d]">{s.desc}</p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section id="pricing" className="scroll-mt-20 mx-auto max-w-6xl px-6 py-20">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-medium text-primary">Pricing</p>
-          <h2 className="mt-2 text-balance text-3xl font-semibold tracking-tight text-foreground">
-            Plans that scale with your exam program
-          </h2>
-          <p className="mt-4 text-pretty text-muted-foreground">
-            Start with the essentials, then expand review capacity and reporting as your team grows.
-          </p>
-        </div>
-        <div className="mx-auto mt-10 max-w-md rounded-xl border border-border bg-card p-6 text-center shadow-sm">
-          <p className="text-lg font-semibold text-foreground">Institutional plans</p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Flexible pricing based on candidate volume, integrations, and support needs.
-          </p>
-          <PrimaryButton onClick={onLogin} className="mt-6">
-            Request pricing
-          </PrimaryButton>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <div className="overflow-hidden rounded-2xl border border-border bg-primary px-8 py-14 text-center shadow-sm">
-          <h2 className="text-balance text-3xl font-semibold tracking-tight text-primary-foreground">
-            Ready to give your exams the integrity they deserve?
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-pretty text-primary-foreground/80">
-            Start analyzing sessions in minutes. Bring your existing recordings —
-            no infrastructure changes required.
-          </p>
-          <div className="mt-8 flex justify-center">
-            <button
-              onClick={onGetStarted}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-card px-6 text-sm font-medium text-foreground shadow-sm transition-transform hover:-translate-y-0.5"
-            >
-              Get started free
-              <ArrowRight className="size-4" />
-            </button>
-          </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
       {/* Footer */}
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 sm:flex-row">
+      <footer className="relative z-20 border-t border-blue-100 bg-white/60 py-8 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 sm:flex-row sm:px-10">
           <Logo />
-          <p className="text-sm text-muted-foreground">
-            © 2026 ExamVision AI, Inc. All rights reserved.
+          <p className="text-sm text-[#5a718d]">
+            © {new Date().getFullYear()} ExamVision AI. Defensible proctoring intelligence.
           </p>
-          <div className="flex items-center gap-6">
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-              Privacy
-            </a>
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-              Terms
-            </a>
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-              Security
-            </a>
+          <div className="flex items-center gap-6 text-sm font-medium text-[#5a718d]">
+            <a href="#" className="hover:text-[#0f1e36]">Security</a>
+            <a href="#" className="hover:text-[#0f1e36]">Privacy Policy</a>
+            <a href="#" className="hover:text-[#0f1e36]">Terms</a>
           </div>
         </div>
       </footer>

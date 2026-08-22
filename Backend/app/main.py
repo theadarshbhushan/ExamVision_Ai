@@ -3,12 +3,21 @@ import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-from app.auth import create_access_token, get_current_user, hash_password, require_role, serialize_user, verify_password
+from app.auth import (
+    create_access_token,
+    get_current_user,
+    get_optional_current_user,
+    hash_password,
+    require_role,
+    serialize_user,
+    verify_password,
+)
 from app.config import (
     BASE_DIR,
     COOKIE_SECURE,
@@ -44,9 +53,19 @@ from app.pipeline_runner import run_pipeline_job
 
 app = FastAPI(title="ExamVision AI Backend")
 
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -116,6 +135,7 @@ def _serialize_exam_session(document: dict):
 
 
 @app.post("/api/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(payload: UserRegisterRequest):
     users = get_collection("users")
     normalized_email = payload.email.lower()
@@ -140,6 +160,7 @@ async def register_user(payload: UserRegisterRequest):
 
 
 @app.post("/api/auth/login", response_model=UserAuthResponse)
+@app.post("/auth/login", response_model=UserAuthResponse)
 async def login_user(payload: UserLoginRequest, response: Response):
     users = get_collection("users")
     normalized_email = payload.email.lower()
@@ -159,16 +180,22 @@ async def login_user(payload: UserLoginRequest, response: Response):
 
     token = create_access_token(user_doc["_id"])
     _set_auth_cookie(response, token)
-    return {"user": UserResponse(**serialize_user(user_doc))}
+    return {
+        "user": UserResponse(**serialize_user(user_doc)),
+        "access_token": token,
+        "token_type": "bearer",
+    }
 
 
 @app.post("/api/auth/logout", response_model=TokenResponse)
+@app.post("/auth/logout", response_model=TokenResponse)
 async def logout_user(response: Response):
     response.delete_cookie("access_token", path="/")
     return {"message": "Logged out successfully"}
 
 
 @app.get("/api/auth/me", response_model=UserResponse)
+@app.get("/auth/me", response_model=UserResponse)
 async def get_me(current_user: dict = Depends(get_current_user)):
     return UserResponse(**current_user)
 
@@ -428,7 +455,11 @@ async def get_session(session_id: str, current_user: dict = Depends(require_role
 
 
 @app.post("/upload", response_model=UploadResponse)
-async def upload(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def upload(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    current_user: Optional[dict] = Depends(get_optional_current_user),
+):
     job_id = str(uuid.uuid4())
     job_dir = UPLOADS_DIR / job_id
     job_dir.mkdir(parents=True, exist_ok=True)
@@ -437,12 +468,135 @@ async def upload(background_tasks: BackgroundTasks, file: UploadFile = File(...)
     with video_path.open("wb") as f:
         shutil.copyfileobj(file.file, f)
 
+    meta = {
+        "job_id": job_id,
+        "user_id": current_user["id"] if current_user else None,
+        "user_email": current_user["email"].lower() if (current_user and current_user.get("email")) else None,
+        "filename": file.filename,
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    STATUS_DIR.mkdir(parents=True, exist_ok=True)
+    (STATUS_DIR / f"{job_id}_meta.json").write_text(json.dumps(meta))
+
+    try:
+        jobs_col = get_collection("jobs")
+        jobs_col.update_one(
+            {"job_id": job_id},
+            {"$set": meta},
+            upsert=True,
+        )
+    except Exception as e:
+        print(f"MongoDB jobs persist warning: {e}", flush=True)
+
     _status_path(job_id).write_text(
         json.dumps({"job_id": job_id, "status": "processing", "progress": 0})
     )
 
     background_tasks.add_task(run_pipeline_job, job_id, video_path)
     return {"job_id": job_id, "status": "processing"}
+
+
+@app.get("/api/jobs/latest")
+@app.get("/jobs/latest")
+async def get_latest_job(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    user_email = current_user["email"].lower() if current_user.get("email") else None
+    
+    matching_jobs = []
+
+    # 1. Query MongoDB jobs collection
+    try:
+        jobs_col = get_collection("jobs")
+        query_conditions = [{"user_id": user_id}]
+        if user_email:
+            query_conditions.append({"user_email": user_email})
+        for job_doc in jobs_col.find({"$or": query_conditions}):
+            job_id = job_doc["job_id"]
+            status_p = _status_path(job_id)
+            status_info = json.loads(status_p.read_text()) if status_p.exists() else {"status": "unknown"}
+            matching_jobs.append({
+                "job_id": job_id,
+                "status": status_info.get("status", "unknown"),
+                "created_at": job_doc.get("created_at", ""),
+                "filename": job_doc.get("filename", ""),
+            })
+    except Exception:
+        pass
+
+    # 2. Query disk-persisted status metadata files
+    if STATUS_DIR.exists():
+        seen_job_ids = {j["job_id"] for j in matching_jobs}
+        for meta_file in STATUS_DIR.glob("*_meta.json"):
+            try:
+                meta = json.loads(meta_file.read_text())
+                meta_user_id = meta.get("user_id")
+                meta_user_email = meta.get("user_email", "").lower() if meta.get("user_email") else None
+                if meta.get("job_id") not in seen_job_ids and (meta_user_id == user_id or (user_email and meta_user_email == user_email)):
+                    job_id = meta["job_id"]
+                    status_p = _status_path(job_id)
+                    status_info = json.loads(status_p.read_text()) if status_p.exists() else {"status": "unknown"}
+                    matching_jobs.append({
+                        "job_id": job_id,
+                        "status": status_info.get("status", "unknown"),
+                        "created_at": meta.get("created_at", ""),
+                        "filename": meta.get("filename", ""),
+                    })
+            except Exception:
+                continue
+
+    matching_jobs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    if matching_jobs:
+        return matching_jobs[0]
+    return {"job_id": None, "status": None}
+
+
+@app.get("/api/jobs")
+@app.get("/jobs")
+async def list_user_jobs(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    user_email = current_user["email"].lower() if current_user.get("email") else None
+    matching_jobs = []
+
+    try:
+        jobs_col = get_collection("jobs")
+        query_conditions = [{"user_id": user_id}]
+        if user_email:
+            query_conditions.append({"user_email": user_email})
+        for job_doc in jobs_col.find({"$or": query_conditions}):
+            job_id = job_doc["job_id"]
+            status_p = _status_path(job_id)
+            status_info = json.loads(status_p.read_text()) if status_p.exists() else {"status": "unknown"}
+            matching_jobs.append({
+                "job_id": job_id,
+                "status": status_info.get("status", "unknown"),
+                "created_at": job_doc.get("created_at", ""),
+                "filename": job_doc.get("filename", ""),
+            })
+    except Exception:
+        pass
+
+    if STATUS_DIR.exists():
+        seen_job_ids = {j["job_id"] for j in matching_jobs}
+        for meta_file in STATUS_DIR.glob("*_meta.json"):
+            try:
+                meta = json.loads(meta_file.read_text())
+                meta_user_id = meta.get("user_id")
+                meta_user_email = meta.get("user_email", "").lower() if meta.get("user_email") else None
+                if meta.get("job_id") not in seen_job_ids and (meta_user_id == user_id or (user_email and meta_user_email == user_email)):
+                    job_id = meta["job_id"]
+                    status_p = _status_path(job_id)
+                    status_info = json.loads(status_p.read_text()) if status_p.exists() else {"status": "unknown"}
+                    matching_jobs.append({
+                        "job_id": job_id,
+                        "status": status_info.get("status", "unknown"),
+                        "created_at": meta.get("created_at", ""),
+                        "filename": meta.get("filename", ""),
+                    })
+            except Exception:
+                continue
+
+    matching_jobs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return matching_jobs
 
 
 @app.get("/status/{job_id}", response_model=StatusResponse)
