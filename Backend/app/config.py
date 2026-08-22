@@ -59,6 +59,6 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").strip().lower() in {"1", "true", "yes", "on"}
 
 # Default production model weights path and active model environment variable override
-DEFAULT_DETECTOR_MODEL = BASE_DIR.parent.parent / "AI-ML" / "models" / "phone_chit_detector_v8.pt"
+DEFAULT_DETECTOR_MODEL = BASE_DIR.parent.parent / "AI-ML" / "models" / "phone_chit_detector_v4.pt"
 ACTIVE_DETECTOR_MODEL = os.getenv("ACTIVE_DETECTOR_MODEL", str(DEFAULT_DETECTOR_MODEL))
 

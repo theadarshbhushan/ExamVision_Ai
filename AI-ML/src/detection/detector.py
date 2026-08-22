@@ -8,7 +8,7 @@ class YOLODetector:
     YOLOv8 wrapper for detecting exam cheating tools (phones, chits, supplement passing, etc.).
     Fine-tuned on cheating_dataset.
     """
-    DETECTION_CONFIDENCE_THRESHOLD = 0.15
+    DETECTION_CONFIDENCE_THRESHOLD = 0.25
     def __init__(self, model_path=None):
         if model_path is None:
             # Check env override first for backwards-compatibility
@@ -16,9 +16,9 @@ class YOLODetector:
             if env_model:
                 model_path = os.path.abspath(env_model)
             else:
-                pkg_model = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "models", "phone_chit_detector_v8.pt"))
-                cwd_model_raw = os.path.abspath(os.path.join("models", "phone_chit_detector_v8.pt"))
-                cwd_model_aiml = os.path.abspath(os.path.join("AI-ML", "models", "phone_chit_detector_v8.pt"))
+                pkg_model = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "models", "phone_chit_detector_v4.pt"))
+                cwd_model_raw = os.path.abspath(os.path.join("models", "phone_chit_detector_v4.pt"))
+                cwd_model_aiml = os.path.abspath(os.path.join("AI-ML", "models", "phone_chit_detector_v4.pt"))
                 
                 if os.path.exists(pkg_model):
                     model_path = pkg_model
@@ -59,7 +59,7 @@ class YOLODetector:
             raise RuntimeError("Model is not loaded. Cannot run inference.")
             
         # Run inference (verbose=False keeps stdout clean)
-        results = self.model(frame, conf=self.DETECTION_CONFIDENCE_THRESHOLD, imgsz=1280, verbose=False)
+        results = self.model(frame, conf=self.DETECTION_CONFIDENCE_THRESHOLD, imgsz=416, verbose=False)
         
         detections = []
         for r in results:
