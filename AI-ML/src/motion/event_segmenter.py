@@ -8,7 +8,7 @@ class EventSegmenter:
             config = {}
             
         self.config = {
-            'motion_threshold': config.get('motion_threshold', 0.02),
+            'motion_threshold': config.get('motion_threshold', 0.1),
             'min_event_frames': config.get('min_event_frames', 5),    # N frames to start
             'max_gap_frames': config.get('max_gap_frames', 15)       # M frames to end
         }

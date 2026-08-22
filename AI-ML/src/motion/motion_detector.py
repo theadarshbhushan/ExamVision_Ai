@@ -26,7 +26,7 @@ class MotionDetector:
             'grid_cols': config.get('grid_cols', 3),
             'custom_zones': config.get('custom_zones', None),          # Custom irregular zones (normalized bbox list)
             'zone_weights': config.get('zone_weights', None),          # Zone weights/masking (dict of zone_id: weight)
-            'motion_threshold': config.get('motion_threshold', 0.02), # Active threshold ratio
+            'motion_threshold': config.get('motion_threshold', 0.1), # Active threshold ratio
             # Vibration suppression
             'vibration_suppression_enabled': config.get('vibration_suppression_enabled', True),
             'vibration_intensity_threshold': config.get('vibration_intensity_threshold', 0.01),

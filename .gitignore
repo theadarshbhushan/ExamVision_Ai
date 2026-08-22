@@ -34,6 +34,7 @@ AI-ML/data/
 *.pth
 AI-ML/models/
 AI-ML/runs/
+runs/
 
 # Debug and video artifacts
 *.avi
@@ -47,7 +48,8 @@ test_snapshots/
 
 # Backend transient database and uploaded media files
 Backend/app/data/
-AI-ML/
 frontend_old/
-.venv/
-.pytest_cache/
+
+# OS artifacts
+.DS_Store
+**/.DS_Store
